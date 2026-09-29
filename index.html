@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>栈序云寄售 · 让闲置流转更有价值</title>
+<title>栈序云寄售 · 激活码自动发货平台 · 付款即发码</title>
+<meta name="description" content="栈序云寄售 - 数字商品激活码自动发货平台。卖家挂码即上架，买家付款即自动发码，秒级交付、加密托管、防欺诈、T+1 结算。">
 <style>
   :root{
     --ink:#0b1220;
@@ -19,6 +20,8 @@
     --muted:#6b7493;
     --line:rgba(20,30,60,.08);
     --shadow:0 24px 60px -24px rgba(20,30,80,.35);
+    --green:#16a34a;
+    --green-2:#22c55e;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
@@ -33,6 +36,7 @@
   a{color:inherit;text-decoration:none}
   img{display:block;max-width:100%}
   .wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace}
 
   /* ===== NAV ===== */
   .nav{
@@ -63,8 +67,6 @@
     transition:.2s;
   }
   .nav-cta:hover{transform:translateY(-1px)}
-  .burger{display:none;flex-direction:column;gap:5px;cursor:pointer}
-  .burger span{width:22px;height:2px;background:var(--ink);border-radius:2px;transition:.3s}
 
   /* ===== HERO ===== */
   .hero{
@@ -80,10 +82,10 @@
   .eyebrow{
     display:inline-flex;align-items:center;gap:8px;
     padding:7px 14px;border-radius:999px;font-size:13px;font-weight:600;
-    background:rgba(43,84,232,.08);color:var(--blue);
-    border:1px solid rgba(43,84,232,.18);
+    background:rgba(22,163,74,.1);color:var(--green);
+    border:1px solid rgba(22,163,74,.22);
   }
-  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 4px rgba(22,192,176,.25);animation:pulse 2s infinite}
+  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green-2);box-shadow:0 0 0 4px rgba(34,197,94,.25);animation:pulse 2s infinite}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   .hero h1{
     font-size:clamp(38px,5.4vw,66px);line-height:1.08;letter-spacing:-1px;
@@ -92,7 +94,7 @@
     -webkit-background-clip:text;background-clip:text;color:transparent;
   }
   .hero h1 em{font-style:normal;color:var(--gold);background:none;-webkit-text-fill-color:var(--gold)}
-  .hero p.lead{font-size:18px;color:var(--muted);max-width:520px;margin-bottom:32px}
+  .hero p.lead{font-size:18px;color:var(--muted);max-width:540px;margin-bottom:32px}
   .hero-actions{display:flex;gap:14px;flex-wrap:wrap}
   .btn{
     display:inline-flex;align-items:center;gap:8px;
@@ -107,28 +109,49 @@
   .hero-meta .m b{font-size:22px;color:var(--ink);font-weight:800}
   .hero-meta .m span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
 
-  /* hero visual */
+  /* hero visual - 模拟订单自动发货面板 */
   .hero-visual{position:relative;height:480px}
-  .hv-card{
-    position:absolute;border-radius:22px;overflow:hidden;background:#fff;
-    box-shadow:var(--shadow);
+  .panel{
+    background:#fff;border-radius:22px;box-shadow:var(--shadow);overflow:hidden;
+    border:1px solid var(--line);
   }
-  .hv-main{inset:30px 0 0 40px;height:380px}
-  .hv-main img{width:100%;height:100%;object-fit:cover}
+  .hv-main{position:absolute;left:20px;right:60px;top:30px;bottom:30px;padding:22px}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .panel-head .ttl{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+  .panel-head .ttl i{width:8px;height:8px;border-radius:50%;background:var(--green-2);box-shadow:0 0 0 3px rgba(34,197,94,.2)}
+  .panel-head .live{font-size:12px;color:var(--green);font-weight:600}
+  .order{display:flex;align-items:center;gap:14px;padding:12px;border-radius:12px;background:#f7f9ff;margin-bottom:10px;animation:slidein .6s ease both}
+  .order:nth-child(2){animation-delay:.1s}
+  .order:nth-child(3){animation-delay:.2s}
+  .order:nth-child(4){animation-delay:.3s}
+  @keyframes slidein{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+  .order .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:18px;color:#fff;background:linear-gradient(135deg,var(--blue),var(--teal));flex:none}
+  .order .info{flex:1;min-width:0}
+  .order .info .name{font-size:13.5px;font-weight:600}
+  .order .info .meta{font-size:11px;color:var(--muted);margin-top:1px}
+  .order .status{font-size:11px;font-weight:700;padding:4px 9px;border-radius:999px;flex:none}
+  .status.done{background:rgba(22,163,74,.12);color:var(--green)}
+  .status.go{background:rgba(43,84,232,.12);color:var(--blue)}
+  .code-box{
+    margin-top:14px;padding:12px 14px;border-radius:12px;background:#0e1530;color:#cdd6f6;
+    font-size:12.5px;font-family:"SF Mono",Menlo,Consolas,monospace;display:flex;align-items:center;justify-content:space-between
+  }
+  .code-box .key{letter-spacing:1px}
+  .code-box .key b{color:var(--gold-2)}
+  .code-box .cp{font-size:11px;color:var(--teal);cursor:pointer}
   .hv-float{
-    width:200px;padding:16px;border-radius:18px;background:rgba(255,255,255,.92);
-    backdrop-filter:blur(8px);box-shadow:var(--shadow);
-    top:20px;right:0;
+    position:absolute;width:200px;padding:16px;border-radius:18px;background:rgba(255,255,255,.95);
+    backdrop-filter:blur(8px);box-shadow:var(--shadow);top:20px;right:0;
   }
   .hv-float .ring{width:44px;height:44px;border-radius:50%;
-    background:conic-gradient(var(--teal),var(--blue),var(--gold),var(--teal));
+    background:conic-gradient(var(--teal),var(--blue),var(--gold-2),var(--teal));
     display:grid;place-items:center;color:#fff;font-weight:800;font-size:16px}
   .hv-float .t{font-weight:700;font-size:14px}
   .hv-float .s{font-size:12px;color:var(--muted)}
   .hv-float .bar{height:6px;border-radius:6px;background:#eef1f7;margin-top:10px;overflow:hidden}
-  .hv-float .bar i{display:block;height:100%;width:78%;background:linear-gradient(90deg,var(--teal),var(--blue))}
+  .hv-float .bar i{display:block;height:100%;width:92%;background:linear-gradient(90deg,var(--teal),var(--green-2))}
   .hv-tag{
-    width:170px;padding:14px;border-radius:16px;background:#fff;
+    position:absolute;width:170px;padding:14px;border-radius:16px;background:#fff;
     box-shadow:var(--shadow);bottom:0;left:0;
   }
   .hv-tag .num{font-size:24px;font-weight:800;color:var(--gold)}
@@ -138,11 +161,8 @@
     background:radial-gradient(circle at 30% 30%,rgba(91,124,255,.35),transparent 65%);
     filter:blur(8px);top:-40px;right:-40px;z-index:-1;
   }
-  .cloud-shape{
-    position:absolute;width:260px;height:120px;left:-30px;bottom:60px;z-index:-1;opacity:.55;
-  }
 
-  /* ===== MARQUEE / TRUST ===== */
+  /* ===== TRUST MARQUEE ===== */
   .trust{background:#0e1530;color:#cdd6f6;padding:18px 0;overflow:hidden}
   .marquee{display:flex;gap:60px;white-space:nowrap;animation:scroll 30s linear infinite;font-size:14px;font-weight:500;letter-spacing:1px}
   .marquee span{display:inline-flex;align-items:center;gap:14px}
@@ -189,6 +209,14 @@
   .step h3{font-size:18px;margin-bottom:8px}
   .step p{color:var(--muted);font-size:14px;padding:0 6px}
 
+  /* seller / buyer tabs */
+  .flow-tabs{display:flex;justify-content:center;gap:10px;margin-bottom:36px}
+  .flow-tabs button{
+    padding:10px 24px;border-radius:999px;border:1px solid var(--line);background:#fff;
+    font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:.2s
+  }
+  .flow-tabs button.active{background:linear-gradient(135deg,var(--blue),var(--blue-2));color:#fff;border-color:transparent;box-shadow:0 12px 24px -12px rgba(43,84,232,.6)}
+
   /* ===== CATEGORIES ===== */
   .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
   .cat{
@@ -203,6 +231,8 @@
   .cat .cap p{font-size:13px;opacity:.85;margin-top:4px}
   .cat .badge{position:absolute;top:16px;left:16px;padding:5px 12px;border-radius:999px;
     font-size:12px;font-weight:600;background:rgba(255,255,255,.85);color:var(--ink);backdrop-filter:blur(4px)}
+  .cat .price{position:absolute;top:16px;right:16px;padding:5px 12px;border-radius:999px;
+    font-size:12px;font-weight:700;background:rgba(22,163,74,.92);color:#fff}
 
   /* ===== STATS ===== */
   .stats{
@@ -240,7 +270,8 @@
     box-shadow:0 30px 70px -30px rgba(43,84,232,.6);
   }
   .cta-box::before{content:"";position:absolute;inset:0;
-    background:url("https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=abstract%20cloud%20particles%20bokeh%20gold%20and%20blue%20soft%20light%20premium%20minimal&image_size=landscape_16_9") center/cover;opacity:.18;mix-blend-mode:overlay}
+    background:radial-gradient(circle at 20% 20%,rgba(255,255,255,.18),transparent 40%);
+    opacity:.9}
   .cta-box>*{position:relative;z-index:2}
   .cta-box h2{font-size:clamp(28px,3.6vw,42px);font-weight:800;letter-spacing:-.5px;margin-bottom:14px}
   .cta-box p{font-size:17px;opacity:.9;max-width:560px;margin:0 auto 30px}
@@ -254,9 +285,6 @@
   .foot-col a{display:block;font-size:14px;margin-bottom:10px;opacity:.8;transition:.2s}
   .foot-col a:hover{opacity:1;color:var(--gold-2)}
   .foot-bottom{border-top:1px solid rgba(255,255,255,.08);padding-top:22px;display:flex;justify-content:space-between;align-items:center;font-size:13px;flex-wrap:wrap;gap:10px}
-  .foot-bottom .socials{display:flex;gap:12px}
-  .foot-bottom .socials a{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);display:grid;place-items:center;transition:.2s}
-  .foot-bottom .socials a:hover{background:var(--blue);color:#fff}
 
   /* reveal animation */
   .reveal{opacity:0;transform:translateY(30px);transition:.7s cubic-bezier(.2,.7,.2,1)}
@@ -265,14 +293,13 @@
   /* responsive */
   @media(max-width:980px){
     .hero-grid{grid-template-columns:1fr;gap:30px}
-    .hero-visual{height:380px;order:-1}
+    .hero-visual{height:440px;order:2}
     .feat-grid,.cat-grid,.testi-grid{grid-template-columns:repeat(2,1fr)}
     .step-grid{grid-template-columns:repeat(2,1fr);gap:40px}
     .step-grid::before{display:none}
     .stats-inner{grid-template-columns:repeat(2,1fr);gap:34px}
     .foot-grid{grid-template-columns:1fr 1fr}
     .nav-links{display:none}
-    .burger{display:flex}
   }
   @media(max-width:560px){
     .feat-grid,.cat-grid,.testi-grid{grid-template-columns:1fr}
@@ -280,6 +307,9 @@
     .stats{padding:48px 24px}
     section{padding:72px 0}
     .cta-box{padding:54px 24px}
+    .hv-main{right:20px}
+    .hv-float{width:170px;top:auto;bottom:90px;right:-10px}
+    .hv-tag{left:-10px}
   }
 </style>
 </head>
@@ -290,16 +320,15 @@
   <div class="wrap nav-inner">
     <a href="#" class="brand">
       <div class="logo">栈</div>
-      <div>栈序<b>云寄售</b><span>Zhanxu Cloud Consignment</span></div>
+      <div>栈序<b>云寄售</b><span>激活码自动发货</span></div>
     </a>
     <div class="nav-links">
-      <a href="#service">服务特色</a>
-      <a href="#flow">寄售流程</a>
-      <a href="#category">品类专区</a>
-      <a href="#voice">用户声音</a>
+      <a href="#service">核心能力</a>
+      <a href="#flow">发货流程</a>
+      <a href="#category">热门品类</a>
+      <a href="#voice">用户评价</a>
     </div>
-    <a href="#join" class="nav-cta">立即寄售</a>
-    <div class="burger" id="burger"><span></span><span></span><span></span></div>
+    <a href="#join" class="nav-cta">立即挂码</a>
   </div>
 </nav>
 
@@ -307,40 +336,70 @@
 <header class="hero">
   <div class="wrap hero-grid">
     <div class="hero-text reveal">
-      <span class="eyebrow"><span class="dot"></span> 全链路云寄售 · 上线即流通</span>
-      <h1>让闲置<br>流转出<em>真价值</em></h1>
-      <p class="lead">栈序云寄售，依托云端鉴定、智能定价与全国履约网络，让你的奢侈品、潮玩、藏品与数码，安全、高效、高价地找到下一位主人。</p>
+      <span class="eyebrow"><span class="dot"></span> 付款即发码 · 全自动秒级交付</span>
+      <h1>激活码<br>自动<em>发货</em>平台</h1>
+      <p class="lead">栈序云寄售，专为数字商品打造的自动发卡平台。卖家挂码即上架，买家付款后系统秒级自动发货，全程加密托管、防欺诈、T+1 结算。</p>
       <div class="hero-actions">
-        <a href="#join" class="btn btn-primary">免费估价寄售 →</a>
-        <a href="#flow" class="btn btn-ghost">了解寄售流程</a>
+        <a href="#join" class="btn btn-primary">免费开店挂码 →</a>
+        <a href="#flow" class="btn btn-ghost">查看发货流程</a>
       </div>
       <div class="hero-meta">
-        <div class="m"><b>120,000+</b><span>累计寄售件数</span></div>
-        <div class="m"><b>¥18.6亿</b><span>成交总额</span></div>
-        <div class="m"><b>4.9 / 5.0</b><span>用户综合评分</span></div>
+        <div class="m"><b>3秒</b><span>平均发货时长</span></div>
+        <div class="m"><b>2.4亿+</b><span>累计发码次数</span></div>
+        <div class="m"><b>4.9 / 5.0</b><span>买家综合评分</span></div>
       </div>
     </div>
 
     <div class="hero-visual reveal">
       <div class="blob"></div>
-      <svg class="cloud-shape" viewBox="0 0 260 120"><path d="M40,90 Q5,90 5,60 Q5,35 35,38 Q40,10 75,18 Q95,2 120,18 Q150,4 165,28 Q200,20 210,48 Q255,52 245,80 Q250,108 215,100 Q180,112 150,98 Q120,110 90,100 Q55,108 40,90Z" fill="#dbe7ff"/></svg>
-      <div class="hv-card hv-main">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=elegant%20luxury%20consignment%20display%20premium%20handbag%20wristwatch%20jewelry%20on%20pedestal%20soft%20blue%20and%20gold%20lighting%20dreamy%20premium%20aesthetic%20clouds&image_size=portrait_4_3" alt="栈序云寄售 精品展示">
+      <div class="panel hv-main">
+        <div class="panel-head">
+          <div class="ttl"><i></i> 实时自动发货面板</div>
+          <div class="live">● LIVE</div>
+        </div>
+        <div class="order">
+          <div class="ic">🎮</div>
+          <div class="info">
+            <div class="name">Steam 礼品卡 ¥200</div>
+            <div class="meta">买家：user***8821 · 0.8s 前</div>
+          </div>
+          <div class="status done">已发码</div>
+        </div>
+        <div class="order">
+          <div class="ic">🔑</div>
+          <div class="info">
+            <div class="name">Windows 11 专业版激活码</div>
+            <div class="meta">买家：user***3360 · 1.2s 前</div>
+          </div>
+          <div class="status done">已发码</div>
+        </div>
+        <div class="order">
+          <div class="ic">🎬</div>
+          <div class="info">
+            <div class="name">Netflix 会员月卡</div>
+            <div class="meta">买家：user***7012 · 1.6s 前</div>
+          </div>
+          <div class="status go">发码中</div>
+        </div>
+        <div class="code-box">
+          <div class="key">XXXX-XXXX-<b>9F2A</b>-Q7K3</div>
+          <div class="cp">📋 已自动复制</div>
+        </div>
       </div>
-      <div class="hv-card hv-float">
+      <div class="hv-float">
         <div style="display:flex;gap:12px;align-items:center">
-          <div class="ring">98</div>
+          <div class="ring">99</div>
           <div>
-            <div class="t">鉴定通过率</div>
-            <div class="s">云端 AI + 专家复核</div>
+            <div class="t">发货成功率</div>
+            <div class="s">云端自动 · 零人工</div>
           </div>
         </div>
         <div class="bar"><i></i></div>
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">实时流转监测</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">7×24 全时段发货</div>
       </div>
-      <div class="hv-card hv-tag">
-        <div class="num">7.2天</div>
-        <div class="lbl">平均成交周期</div>
+      <div class="hv-tag">
+        <div class="num">3秒</div>
+        <div class="lbl">平均发货时长</div>
       </div>
     </div>
   </div>
@@ -349,18 +408,20 @@
 <!-- ===== TRUST MARQUEE ===== -->
 <div class="trust">
   <div class="marquee" id="marquee">
-    <span><i>★</i> 中检集团认证鉴定</span>
-    <span><i>★</i> 顺丰保价托管</span>
-    <span><i>★</i> 太平洋保险承保</span>
-    <span><i>★</i> 阿里云数据安全</span>
-    <span><i>★</i> 7天无理由下架</span>
-    <span><i>★</i> 全国 36 城上门取件</span>
-    <span><i>★</i> 中检集团认证鉴定</span>
-    <span><i>★</i> 顺丰保价托管</span>
-    <span><i>★</i> 太平洋保险承保</span>
-    <span><i>★</i> 阿里云数据安全</span>
-    <span><i>★</i> 7天无理由下架</span>
-    <span><i>★</i> 全国 36 城上门取件</span>
+    <span><i>★</i> 阿里云数据加密</span>
+    <span><i>★</i> 支付宝/微信担保交易</span>
+    <span><i>★</i> 7×24 自动发货</span>
+    <span><i>★</i> 全网最低手续费</span>
+    <span><i>★</i> 反欺诈风控引擎</span>
+    <span><i>★</i> T+1 卖家结算</span>
+    <span><i>★</i> 72小时争议保障</span>
+    <span><i>★</i> 阿里云数据加密</span>
+    <span><i>★</i> 支付宝/微信担保交易</span>
+    <span><i>★</i> 7×24 自动发货</span>
+    <span><i>★</i> 全网最低手续费</span>
+    <span><i>★</i> 反欺诈风控引擎</span>
+    <span><i>★</i> T+1 卖家结算</span>
+    <span><i>★</i> 72小时争议保障</span>
   </div>
 </div>
 
@@ -368,40 +429,40 @@
 <section id="service">
   <div class="wrap">
     <div class="sec-head reveal">
-      <div class="tag">SERVICE</div>
-      <h2>六大核心能力，重塑寄售体验</h2>
-      <p>从鉴定、定价到履约，栈序把每一个环节都搬到云端，让闲置流转更安全、更高效、更值钱。</p>
+      <div class="tag">CORE ABILITY</div>
+      <h2>六大核心能力，重塑数字商品交易</h2>
+      <p>从挂码、定价、风控到自动发货与结算，栈序把发卡全链路搬到云端，让数字商品流转更安全、更高效。</p>
     </div>
     <div class="feat-grid">
       <div class="feat reveal">
-        <div class="ic">🔍</div>
-        <h3>云端 AI 鉴定</h3>
-        <p>多模态 AI 初筛 + 资深鉴定师复核，覆盖奢侈品、腕表、潮玩等 12 大品类，准确率 98%+。</p>
+        <div class="ic">⚡</div>
+        <h3>秒级自动发货</h3>
+        <p>买家付款成功，系统 3 秒内自动从库存提取激活码，经加密通道推送给买家，支持邮箱、站内信、API 回调。</p>
+      </div>
+      <div class="feat reveal">
+        <div class="ic">🔒</div>
+        <h3>卡密加密托管</h3>
+        <p>卖家上传的激活码采用 AES-256 加密入库，发货前任何人都无法查看明文，杜绝内鬼泄露与人工接触。</p>
       </div>
       <div class="feat reveal">
         <div class="ic">📈</div>
         <h3>智能动态定价</h3>
-        <p>接入全网成交数据库，结合成色、稀缺度与市场热度，自动推荐最优挂牌价。</p>
+        <p>接入全网成交数据库，结合品类热度与库存量，自动推荐最优挂牌价，支持限时折扣与阶梯批发价。</p>
       </div>
       <div class="feat reveal">
-        <div class="ic">🔒</div>
-        <h3>全程保险托管</h3>
-        <p>顺丰保价入仓，太平洋财险承保，云端实时监控仓内温度湿度与件况状态。</p>
+        <div class="ic">🛡️</div>
+        <h3>反欺诈风控引擎</h3>
+        <p>设备指纹 + 行为模型实时识别盗刷、套现与恶意退款，高危订单自动拦截，卖家零承担风险。</p>
       </div>
       <div class="feat reveal">
-        <div class="ic">⚡</div>
-        <h3>极速结算</h3>
-        <p>买家确认收货后 T+1 自动打款至栈序钱包，支持提现到银行卡与微信零钱。</p>
+        <div class="ic">💰</div>
+        <h3>T+1 极速结算</h3>
+        <p>订单完成后 T+1 自动结算至栈序卖家钱包，支持提现到支付宝、银行卡，账单明细全透明可导出。</p>
       </div>
       <div class="feat reveal">
-        <div class="ic">🌐</div>
-        <h3>多平台同步上架</h3>
-        <p>一件寄售，同步分发至栈序主站、合作电商与海外分销渠道，触达 800 万买家。</p>
-      </div>
-      <div class="feat reveal">
-        <div class="ic">🤝</div>
-        <h3>专属寄售管家</h3>
-        <p>1 对 1 资深管家全程跟进，从估价、上架到议价、发货，全流程透明可追溯。</p>
+        <div class="ic">🔌</div>
+        <h3>API 与分销</h3>
+        <p>开放发卡 API，支持接入自有店铺、社群与第三方分销渠道，一件挂码，多端同步售卖。</p>
       </div>
     </div>
   </div>
@@ -412,29 +473,29 @@
   <div class="wrap">
     <div class="sec-head reveal">
       <div class="tag">HOW IT WORKS</div>
-      <h2>四步开启云端寄售</h2>
-      <p>无需出门、无需谈判，拍照上传即可启动流转，最快当天入仓上架。</p>
+      <h2>四步开启自动发卡</h2>
+      <p>无需人工值守，挂码即上架，买家付款即发码，7×24 全自动运转。</p>
     </div>
     <div class="step-grid">
       <div class="step reveal">
         <div class="num">01<small>步</small></div>
-        <h3>在线估价</h3>
-        <p>上传物品多角度照片与凭证，AI 5 分钟内给出估价区间与寄售建议。</p>
+        <h3>上传卡密</h3>
+        <p>批量导入激活码/卡密（支持 txt、csv、Excel），自动去重校验，秒级入云库存。</p>
       </div>
       <div class="step reveal">
         <div class="num">02<small>步</small></div>
-        <h3>免费上门取件</h3>
-        <p>顺丰保价全国 36 城上门，或自行寄送至栈序云仓，全程可追踪。</p>
+        <h3>智能定价</h3>
+        <p>填写品名、分类，AI 推荐挂牌价，设置限购、批发价与限时折扣，一键上架。</p>
       </div>
       <div class="step reveal">
         <div class="num">03<small>步</small></div>
-        <h3>鉴定上架</h3>
-        <p>专家复核 + 影棚级实拍，多平台同步挂牌，智能定价随行就市。</p>
+        <h3>自动发货</h3>
+        <p>买家下单付款，系统 3 秒内自动提取卡密，加密推送给买家，订单实时可查。</p>
       </div>
       <div class="step reveal">
         <div class="num">04<small>步</small></div>
-        <h3>成交结算</h3>
-        <p>买家付款后 24 小时内发货，签收后 T+1 自动结算到账，透明分账。</p>
+        <h3>极速结算</h3>
+        <p>订单完成后 T+1 自动结算到账，卖家钱包随时提现，账单与发票一键导出。</p>
       </div>
     </div>
   </div>
@@ -445,45 +506,51 @@
   <div class="wrap">
     <div class="sec-head reveal">
       <div class="tag">CATEGORIES</div>
-      <h2>六大品类专区，万物皆可寄</h2>
-      <p>覆盖主流高价值闲置品类，每一类都配备专业鉴定师与买家社群。</p>
+      <h2>六大热门品类，激活码皆可寄</h2>
+      <p>覆盖主流数字商品激活码，每一类都配备专属风控模型与买家社群。</p>
     </div>
     <div class="cat-grid">
       <div class="cat reveal">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=luxury%20designer%20handbag%20on%20pedestal%20studio%20lighting%20cream%20background%20premium%20elegant&image_size=square_hd" alt="奢侈品包袋">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=software%20activation%20key%20license%20code%20on%20screen%20dark%20tech%20background%20digital%20premium&image_size=square_hd" alt="软件激活码">
         <div class="mask"></div>
         <span class="badge">热寄中</span>
-        <div class="cap"><h3>奢侈品包袋</h3><p>Hermès · Chanel · LV · Dior</p></div>
+        <span class="price">¥29 起</span>
+        <div class="cap"><h3>软件激活码</h3><p>Windows · Office · Adobe · 杀毒</p></div>
       </div>
       <div class="cat reveal">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=luxury%20wristwatch%20macro%20detail%20gold%20and%20steel%20dark%20elegant%20background%20premium&image_size=square_hd" alt="珠宝腕表">
-        <div class="mask"></div>
-        <span class="badge">高溢价</span>
-        <div class="cap"><h3>珠宝腕表</h3><p>Rolex · Cartier · Patek · VCA</p></div>
-      </div>
-      <div class="cat reveal">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=fine%20art%20oil%20painting%20in%20gallery%20premium%20collectible%20soft%20lighting&image_size=square_hd" alt="艺术收藏">
-        <div class="mask"></div>
-        <span class="badge">稀缺</span>
-        <div class="cap"><h3>艺术收藏</h3><p>当代艺术 · 限量版画 · 潮流艺术</p></div>
-      </div>
-      <div class="cat reveal">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=limited%20edition%20designer%20art%20toy%20collectible%20figure%20colorful%20studio&image_size=square_hd" alt="限量潮玩">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=gaming%20gift%20card%20steam%20playstation%20xbox%20colorful%20premium%20studio%20shot&image_size=square_hd" alt="游戏礼品卡">
         <div class="mask"></div>
         <span class="badge">爆款</span>
-        <div class="cap"><h3>限量潮玩</h3><p>BE@RBRICK · KAWS · 联名手办</p></div>
+        <span class="price">¥50 起</span>
+        <div class="cap"><h3>游戏礼品卡</h3><p>Steam · PSN · Xbox · 点卡</p></div>
       </div>
       <div class="cat reveal">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=premium%20camera%20and%20electronic%20gadgets%20on%20dark%20surface%20clean%20product%20shot&image_size=square_hd" alt="数码电子">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=streaming%20service%20membership%20netflix%20spotify%20premium%20subscription%20on%20devices&image_size=square_hd" alt="会员兑换码">
         <div class="mask"></div>
-        <span class="badge">快流转</span>
-        <div class="cap"><h3>数码电子</h3><p>相机 · 游戏 · 音响 · 智能硬件</p></div>
+        <span class="badge">高频</span>
+        <span class="price">¥9.9 起</span>
+        <div class="cap"><h3>会员兑换码</h3><p>Netflix · Spotify · B站 · 爱奇艺</p></div>
       </div>
       <div class="cat reveal">
-        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=premium%20red%20wine%20bottles%20collection%20wooden%rack%20moody%20lighting%20luxury&image_size=square_hd" alt="红酒茗茶">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=cloud%20server%20api%20key%20developer%20terminal%20code%20screen%20tech%20blue&image_size=square_hd" alt="API 与云服务">
         <div class="mask"></div>
-        <span class="badge">陈年</span>
-        <div class="cap"><h3>红酒茗茶</h3><p>名庄红酒 · 普洱老茶 · 名山岩茶</p></div>
+        <span class="badge">高溢价</span>
+        <span class="price">¥99 起</span>
+        <div class="cap"><h3>API 与云服务</h3><p>大模型 API · 云服务器 · 域名</p></div>
+      </div>
+      <div class="cat reveal">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=online%20course%20learning%20platform%20education%20video%20tutorial%20laptop%20clean&image_size=square_hd" alt="网课激活码">
+        <div class="mask"></div>
+        <span class="badge">学习</span>
+        <span class="price">¥19 起</span>
+        <div class="cap"><h3>网课激活码</h3><p>编程 · 设计 · 考研 · 职业资格</p></div>
+      </div>
+      <div class="cat reveal">
+        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/tool_text_to_image?prompt=elegant%20gift%20card%20voucher%20shopping%20retail%20brands%20premium%20flat%20lay&image_size=square_hd" alt="电商购物卡">
+        <div class="mask"></div>
+        <span class="badge">通用</span>
+        <span class="price">¥100 起</span>
+        <div class="cap"><h3>电商购物卡</h3><p>京东 · 天猫 · 亚逊 · 商超卡</p></div>
       </div>
     </div>
   </div>
@@ -494,10 +561,10 @@
   <div class="stats reveal">
     <div class="wrap" style="padding:0">
       <div class="stats-inner">
-        <div class="stat"><div class="v">120<sup>K+</sup></div><div class="k">累计寄售件数</div></div>
-        <div class="stat"><div class="v">¥18.6<sup>亿</sup></div><div class="k">累计成交总额</div></div>
-        <div class="stat"><div class="v">7.2<sup>天</sup></div><div class="k">平均成交周期</div></div>
-        <div class="stat"><div class="v">98<sup>%</sup></div><div class="k">鉴定通过率</div></div>
+        <div class="stat"><div class="v">2.4<sup>亿+</sup></div><div class="k">累计发码次数</div></div>
+        <div class="stat"><div class="v">3<sup>秒</sup></div><div class="k">平均发货时长</div></div>
+        <div class="stat"><div class="v">99.9<sup>%</sup></div><div class="k">发货成功率</div></div>
+        <div class="stat"><div class="v">36<sup>万+</sup></div><div class="k">入驻卖家数</div></div>
       </div>
     </div>
   </div>
@@ -508,27 +575,27 @@
   <div class="wrap">
     <div class="sec-head reveal">
       <div class="tag">VOICES</div>
-      <h2>寄售者的真实声音</h2>
-      <p>超过 36 万用户选择栈序云寄售，让闲置焕发新生。</p>
+      <h2>买卖双方的真实声音</h2>
+      <p>超过 36 万卖家与千万级买家，选择栈序完成激活码的自动发货交易。</p>
     </div>
     <div class="testi-grid">
       <div class="testi reveal">
         <div class="quote">”</div>
         <div class="stars">★★★★★</div>
-        <p>一只闲置两年的 Birkin，拍照上传后 5 分钟就出了估价，第 9 天成交打款，比二手回收高出近 30%。整个过程没出一次门。</p>
-        <div class="who"><div class="av">林</div><div><b>林女士</b><span>上海 · 奢侈品包袋寄售</span></div></div>
+        <p>作为软件代理，囤了几千个 Windows 激活码。在栈序挂码后全自动发货，半夜订单也不漏，月流水稳定涨了 3 倍，手续费还是同行最低。</p>
+        <div class="who"><div class="av">陈</div><div><b>陈先生</b><span>深圳 · 软件激活码卖家</span></div></div>
       </div>
       <div class="testi reveal">
         <div class="quote">”</div>
         <div class="stars">★★★★★</div>
-        <p>作为摄影师，换器材频率高。栈序的相机寄售专区很懂行，估价准、买家靠谱，结算也快，已经成我的固定出清通道。</p>
-        <div class="who"><div class="av">陈</div><div><b>陈先生</b><span>北京 · 数码电子寄售</span></div></div>
+        <p>买了个 Netflix 月卡，付款后真的 3 秒就收到激活码，复制粘贴直接用上了。比那种「人工客服稍后发货」的平台靠谱太多。</p>
+        <div class="who"><div class="av">林</div><div><b>林女士</b><span>上海 · 会员兑换码买家</span></div></div>
       </div>
       <div class="testi reveal">
         <div class="quote">”</div>
         <div class="stars">★★★★★</div>
-        <p>寄了几幅版画和一只潮玩，专属管家全程跟进，每次议价都会跟我确认。最难得的是仓内实时监控可查，安心感拉满。</p>
-        <div class="who"><div class="av">周</div><div><b>周女士</b><span>深圳 · 艺术收藏寄售</span></div></div>
+        <p>接入栈序 API 后，我自己的店铺也能自动发卡了。风控引擎帮我拦了几笔盗刷订单，争议处理也快，72 小时内退款到账。</p>
+        <div class="who"><div class="av">周</div><div><b>周先生</b><span>杭州 · 独立站卖家</span></div></div>
       </div>
     </div>
   </div>
@@ -538,11 +605,11 @@
 <section id="join" class="cta">
   <div class="wrap">
     <div class="cta-box reveal">
-      <h2>让你的闲置，今天就启程</h2>
-      <p>3 分钟拍照估价，免费上门取件，全程保险托管。新用户首单寄售服务费低至 0%。</p>
+      <h2>让你的激活码，今天就开始自动发货</h2>
+      <p>3 分钟开店挂码，0 人工值守，7×24 全自动发货。新卖家首月手续费低至 0%。</p>
       <div class="hero-actions" style="justify-content:center">
-        <a href="#" class="btn btn-ghost" style="background:#fff;color:var(--blue)">立即拍照估价 →</a>
-        <a href="#" class="btn btn-primary" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4)">下载栈序 App</a>
+        <a href="#" class="btn btn-ghost" style="background:#fff;color:var(--blue)">免费开店挂码 →</a>
+        <a href="#" class="btn btn-primary" style="background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4)">查看卖家费率</a>
       </div>
     </div>
   </div>
@@ -557,54 +624,44 @@
           <div class="logo">栈</div>
           <div style="color:#fff">栈序<b style="color:var(--gold-2)">云寄售</b></div>
         </a>
-        <p>栈序云寄售，以云端鉴定与智能定价，让每一件闲置都能安全、高效、高价地流转到下一位主人手中。</p>
+        <p>栈序云寄售，专为数字商品打造的激活码自动发货平台。让每一个激活码都能安全、高效、自动地流转到买家手中。</p>
       </div>
       <div class="foot-col">
         <h4>服务</h4>
-        <a href="#service">服务特色</a>
-        <a href="#flow">寄售流程</a>
-        <a href="#category">品类专区</a>
-        <a href="#">寄售费率</a>
+        <a href="#service">核心能力</a>
+        <a href="#flow">发货流程</a>
+        <a href="#category">热门品类</a>
+        <a href="#">卖家费率</a>
       </div>
       <div class="foot-col">
         <h4>帮助</h4>
         <a href="#">常见问题</a>
-        <a href="#">鉴定标准</a>
-        <a href="#">入仓指南</a>
-        <a href="#">联系管家</a>
+        <a href="#">挂码指南</a>
+        <a href="#">API 文档</a>
+        <a href="#">争议保障</a>
       </div>
       <div class="foot-col">
         <h4>关于</h4>
         <a href="#">关于栈序</a>
-        <a href="#">资质与认证</a>
+        <a href="#">资质与合规</a>
         <a href="#">合作伙伴</a>
         <a href="#">加入我们</a>
       </div>
     </div>
     <div class="foot-bottom">
-      <div>© 2026 栈序云寄售 Zhanxu Cloud Consignment · 让闲置流转更有价值</div>
-      <div class="socials">
-        <a href="#">微</a><a href="#">博</a><a href="#">抖</a><a href="#">小</a>
-      </div>
+      <div>© 2026 栈序云寄售 Zhanxu Cloud Consignment · 激活码自动发货平台</div>
+      <div>付款即发码 · 7×24 全自动</div>
     </div>
   </div>
 </footer>
 
 <script>
-  // nav scroll state
   const nav=document.getElementById('nav');
   window.addEventListener('scroll',()=>nav.classList.toggle('scrolled',window.scrollY>20));
-
-  // reveal on scroll
   const io=new IntersectionObserver((es)=>{
     es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
   },{threshold:.12});
   document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-
-  // burger (mobile placeholder - smooth scroll links already work)
-  document.getElementById('burger').addEventListener('click',()=>{
-    alert('移动端菜单：请使用顶部导航或滚动至各板块');
-  });
 </script>
 </body>
 </html>
