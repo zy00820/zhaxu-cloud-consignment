@@ -2429,13 +2429,14 @@
   });
 
   // URL hash 快捷入口：#merchant 打开商家登录，#market 打开买家商城
-  window.addEventListener('load',()=>{
+  function handleHash(){
     const h=location.hash;
-    setTimeout(()=>{
-      if(h==='#merchant')openMerchant();
-      else if(h==='#market')openMarket();
-    },300);
-  });
+    if(h==='#merchant'||h==='#login'){openMerchant();return;}
+    if(h==='#market'||h==='#shop'){openMarket();return;}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',handleHash);
+  else handleHash();
+  window.addEventListener('hashchange',handleHash);
 </script>
 </body>
 </html>

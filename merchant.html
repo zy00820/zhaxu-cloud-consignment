@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>栈序云寄售 · 商家后台</title>
+  <script>location.replace('index.html#merchant');</script>
+</head>
+<body>
+  <p>正在跳转… <a href="index.html#merchant">点此进入商家后台</a></p>
+</body>
+</html>
+
+cat > market.html << 'EOF'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>栈序云寄售 · 买家商城</title>
+  <script>location.replace('index.html#market');</script>
+</head>
+<body>
+  <p>正在跳转… <a href="index.html#market">点此进入买家商城</a></p>
+</body>
+</html>
+
+cat > login.html << 'EOF'
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>栈序云寄售 · 商家登录</title>
+  <script>location.replace('index.html#merchant');</script>
+</head>
+<body>
+  <p>正在跳转… <a href="index.html#merchant">点此进入</a></p>
+</body>
+</html>
+
+ls -la *.html
+__tr_native_ec=$?; pwd -P >| '/var/log/tool/command-execution/52968c018ca09c5a86a40eb95a8c51b0/cwd.txt'; exit "$__tr_native_ec"
