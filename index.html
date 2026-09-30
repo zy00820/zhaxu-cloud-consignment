@@ -1761,9 +1761,7 @@
     tbody.closest('.table-wrap').style.display=orders.length?'block':'none';
     if(!orders.length)return;
     const statusMap={
-      pending_pay:['待买家付款','gray'],
-      waiting_confirm:['待商家确认','blue'],
-      paid:['待发货','orange'],
+      waiting_confirm:['待确认收款','blue'],
       shipped:['已发货','green'],
       refunded:['已退款','gray']
     };
@@ -1773,9 +1771,7 @@
         ?`<span class="key-cell" title="${o.cardKey||''}">${o.cardKey?'****-****-****-'+o.cardKey.slice(-4):'—'}</span>`
         :'—';
       let actions='—';
-      if(o.status==='pending_pay')actions=`<span style="color:#999;font-size:12px">等买家扫码</span>`;
-      else if(o.status==='waiting_confirm')actions=`<button class="row-btn primary" data-confirm="${o.id}">确认收款</button>`;
-      else if(o.status==='paid')actions=`<button class="row-btn primary" data-ship="${o.id}">立即发货</button>`;
+      if(o.status==='waiting_confirm')actions=`<button class="row-btn primary" data-confirm="${o.id}">确认收款并发货</button>`;
       else if(o.status==='shipped')actions=`<button class="row-btn danger" data-refund="${o.id}">退款</button>`;
       return `<tr>
         <td style="font-family:monospace;font-size:12px">${o.id}</td>
@@ -1788,9 +1784,7 @@
         <td>${actions}</td>
       </tr>`;
     }).join('');
-    tbody.querySelectorAll('[data-pay]').forEach(b=>b.addEventListener('click',()=>payOrder(b.dataset.pay)));
     tbody.querySelectorAll('[data-confirm]').forEach(b=>b.addEventListener('click',()=>confirmPay(b.dataset.confirm)));
-    tbody.querySelectorAll('[data-ship]').forEach(b=>b.addEventListener('click',()=>shipOrder(b.dataset.ship)));
     tbody.querySelectorAll('[data-refund]').forEach(b=>b.addEventListener('click',()=>refundOrder(b.dataset.refund)));
     tbody.querySelectorAll('.key-cell').forEach(td=>td.addEventListener('click',()=>{
       const row=td.closest('tr');
@@ -1801,7 +1795,7 @@
   }
   $('#orderFilter').addEventListener('change',renderOrders);
 
-  // 模拟买家下单（创建待付款订单）
+  // 模拟买家下单（直接创建待确认收款订单，模拟买家扫码付款后商家看到的状态）
   $('#simOrderBtn').addEventListener('click',()=>{
     const products=getProducts();
     if(!products.length){showToast('请先添加商品','err');switchDashTab('cards');return;}
@@ -1813,12 +1807,12 @@
       id:'ZX'+Date.now().toString().slice(-8),
       productId:p.id,productName:p.name,
       buyer:'buyer_'+Math.random().toString(36).slice(2,8),
-      amount:p.price,status:'pending_pay',cardKey:null,
-      createdAt:Date.now()
+      amount:p.price,status:'waiting_confirm',cardKey:null,
+      createdAt:Date.now(),buyerPaidAt:Date.now()
     };
     const list=getOrders();list.push(order);setOrders(list);
     renderOrders();refreshStats();
-    showToast(`买家已下单：${p.name}，等待付款 → 点击「模拟支付」触发自动发货`,'ok');
+    showToast(`模拟买家已下单：${p.name}，请点「确认收款」自动发货`,'ok');
   });
 
   // 自动发货核心：从卡密池取可用卡密 → 标记已售 → 订单置已发货
@@ -2054,9 +2048,9 @@
   $$('[data-close-buy]').forEach(b=>b.addEventListener('click',()=>buyMask.classList.remove('show')));
   buyMask.addEventListener('click',(e)=>{if(e.target===buyMask)buyMask.classList.remove('show')});
 
-  // 买家下单 → 创建待付款订单 → 展示收款码扫码 → 点"我已支付"→ 待商家确认
+  // 买家下单 → 创建订单(待商家确认) → 展示收款码 → 扫码付款 → 商家确认并发货
   const resultMask=$('#resultMask');
-  $('#payBtn').addEventListener('click',async ()=>{
+  $('#payBtn').addEventListener('click',()=>{
     const nick=$('#buyNick').value.trim();
     const phone=$('#buyPhone').value.trim();
     if(!nick){showToast('请输入买家昵称','err');return;}
@@ -2065,42 +2059,31 @@
     const {gid,memail,p,shop,stock}=curBuyGoods;
     if(stock<=0){showToast('手慢了，商品已售罄','err');buyMask.classList.remove('show');renderMarket();return;}
 
-    const payBtn=$('#payBtn');
-    payBtn.disabled=true;payBtn.textContent='处理中…';
+    // 读取商家收款码
+    const paycode=store.get(paycodeKey(memail))||{wx:'',ali:'',note:''};
+    if(!paycode.wx&&!paycode.ali){
+      showToast('商家暂未配置收款方式，请稍后再试','err');return;
+    }
 
-    // 创建待付款订单（本地）
+    // 创建订单（直接进入待商家确认状态，订单自动进商家后台）
     const orderId='ZX'+Date.now().toString().slice(-8);
     const merchOrders=store.get(ordKey(memail));
     merchOrders.push({
       id:orderId,productId:gid,productName:p.name,
-      buyer:nick,buyerPhone:phone,amount:p.price,status:'pending_pay',
-      cardKey:null,createdAt:Date.now()
+      buyer:nick,buyerPhone:phone,amount:p.price,status:'waiting_confirm',
+      cardKey:null,createdAt:Date.now(),buyerPaidAt:Date.now()
     });
     store.set(ordKey(memail),merchOrders);
-    // 同时写买家订单（待确认支付）
     const buyerOrders=store.get(BUYER_ORDERS_KEY);
     buyerOrders.push({
       id:orderId,merchantEmail:memail,productId:gid,productName:p.name,shop,
       amount:p.price,buyerNick:nick,buyerPhone:phone,cardKey:null,
-      status:'pending_pay',createdAt:Date.now()
+      status:'waiting_confirm',createdAt:Date.now()
     });
     store.set(BUYER_ORDERS_KEY,buyerOrders);
 
-    // 读取商家收款码
-    const paycode=store.get(paycodeKey(memail))||{wx:'',ali:'',note:''};
-    if(!paycode.wx&&!paycode.ali){
-      buyMask.classList.remove('show');
-      showToast('商家暂未配置收款方式，请稍后再试','err');
-      // 回滚订单
-      const orders=store.get(ordKey(memail)).filter(o=>o.id!==orderId);store.set(ordKey(memail),orders);
-      const bos=store.get(BUYER_ORDERS_KEY).filter(o=>o.id!==orderId);store.set(BUYER_ORDERS_KEY,bos);
-      payBtn.disabled=false;payBtn.textContent='立即支付';
-      return;
-    }
-
     buyMask.classList.remove('show');
-    payBtn.disabled=false;payBtn.textContent='立即支付';
-    // 打开收款码弹窗
+    // 打开收款码弹窗（展示后买家扫码付款即可，订单已在商家后台）
     openPayConfirm(orderId,p.name,shop,p.price,paycode);
   });
 
@@ -2265,12 +2248,10 @@
     if(name==='payment')renderPaycode();
   };
 
-  // ========== 买家支付弹窗（展示收款码） ==========
+  // ========== 买家支付弹窗（展示收款码，买家扫码即可，订单已自动进商家后台） ==========
   const payConfirmMask=$('#payConfirmMask');
-  let _curPayOrderId=null;
 
   function openPayConfirm(orderId,goods,shop,amount,paycode){
-    _curPayOrderId=orderId;
     const hasWx=!!paycode.wx,hasAli=!!paycode.ali;
     if(!hasWx&&!hasAli){
       showToast('商家未上传收款码，请联系商家','err');return;
@@ -2291,31 +2272,13 @@
       <div class="pay-order-id">订单号：${orderId}</div>
       <div style="margin-top:14px">${wxBox}${aliBox}</div>
       ${note}
+      <div style="font-size:12px;color:#999;margin-top:10px">💡 扫码付款后，商家将在后台确认收款并发货</div>
       <div style="margin-top:16px">
-        <button class="btn btn-primary" id="buyerPaidBtn" style="width:100%;padding:12px">我已支付，等待发货</button>
-        <button class="btn btn-ghost" id="payConfirmCancel" style="width:100%;padding:12px;margin-top:8px">取消</button>
+        <button class="btn btn-primary" id="payConfirmDone" style="width:100%;padding:12px">完成，等待发货</button>
       </div>
     `;
     payConfirmMask.classList.add('show');
-    $('#buyerPaidBtn').addEventListener('click',()=>{
-      // 更新订单状态为 waiting_confirm
-      const merchants=store.get(USERS_KEY);
-      merchants.forEach(m=>{
-        const orders=store.get(ordKey(m.email));
-        const o=orders.find(x=>x.id===_curPayOrderId);
-        if(o){o.status='waiting_confirm';o.buyerPaidAt=Date.now();store.set(ordKey(m.email),orders);}
-      });
-      const bos=store.get(BUYER_ORDERS_KEY);
-      const bo=bos.find(x=>x.id===_curPayOrderId);
-      if(bo){bo.status='waiting_confirm';bo.buyerPaidAt=Date.now();store.set(BUYER_ORDERS_KEY,bos);}
-      payConfirmMask.classList.remove('show');
-      _curPayOrderId=null;
-      showToast('已通知商家确认收款，请耐心等待','ok');
-    });
-    $('#payConfirmCancel').addEventListener('click',()=>{
-      payConfirmMask.classList.remove('show');
-      _curPayOrderId=null;
-    });
+    $('#payConfirmDone').addEventListener('click',()=>payConfirmMask.classList.remove('show'));
   }
 
   // ESC 关闭弹窗
