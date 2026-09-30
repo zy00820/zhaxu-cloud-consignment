@@ -2204,8 +2204,8 @@
   }
 
   // ========== 收款码管理 ==========
-  function getPaycode(){return store.get(paycodeKey(curEmail))||{wx:'',ali:'',note:''};}
-  function setPaycode(d){store.set(paycodeKey(curEmail),d);}
+  function getPaycode(){return store.get(paycodeKey(curMerchant.email))||{wx:'',ali:'',note:''};}
+  function setPaycode(d){store.set(paycodeKey(curMerchant.email),d);}
 
   function renderPaycode(){
     const p=getPaycode();
@@ -2275,9 +2275,9 @@
 
   // ========== 店铺设置 ==========
   function renderSettings(){
-    const s=store.get(settingsKey(curEmail))||{};
+    const s=store.get(settingsKey(curMerchant.email))||{};
     const merchants=store.get(USERS_KEY);
-    const m=merchants.find(x=>x.email===curEmail);
+    const m=merchants.find(x=>x.email===curMerchant.email);
     $('#shopName').value=s.shopName||curMerchant?.shop||'';
     $('#shopContact').value=s.shopContact||m?.contact||'';
     $('#shopEmail').value=s.shopEmail||'';
@@ -2294,11 +2294,11 @@
       jsTemplate:$('#jsTemplate').value.trim(),
       jsPublicKey:$('#jsPublicKey').value.trim()
     };
-    store.set(settingsKey(curEmail),s);
+    store.set(settingsKey(curMerchant.email),s);
     // 同步更新商家基本信息
     if(curMerchant){
       const merchants=store.get(USERS_KEY);
-      const m=merchants.find(x=>x.email===curEmail);
+      const m=merchants.find(x=>x.email===curMerchant.email);
       if(m){
         if(s.shopName)m.shop=s.shopName;
         if(s.shopContact)m.contact=s.shopContact;
