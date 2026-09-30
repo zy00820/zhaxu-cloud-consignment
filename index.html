@@ -1324,10 +1324,31 @@
 
       <!-- 店铺设置 -->
       <div class="dash-pane" data-pane="settings">
-        <div class="empty-hint">
-          <div class="empty-ic">⚙️</div>
-          <h3>店铺设置</h3>
-          <p>资料编辑、费率查看、提现配置等功能正在开发中。</p>
+        <div class="panel-bar">
+          <div class="panel-title">⚙️ 店铺设置</div>
+        </div>
+        <div class="sub-form">
+          <h4>基本信息</h4>
+          <div class="field-row">
+            <label class="field"><span>店铺名称</span><input type="text" id="shopName" placeholder="如：栈序卡密专营店"></label>
+            <label class="field"><span>联系人</span><input type="text" id="shopContact" placeholder="如：张三"></label>
+          </div>
+          <label class="field"><span>联系邮箱（买家下单后通知你）</span><input type="email" id="shopEmail" placeholder="如：you@qq.com"></label>
+        </div>
+
+        <div class="sub-form" style="margin-top:20px">
+          <h4>📧 邮件通知（可选，配置后买家点「我已支付」会自动发邮件给你）</h4>
+          <p class="form-tip">使用 EmailJS 免费服务（每月 200 封，前端直接调用，无需后端）。<a href="https://www.emailjs.com/docs/" target="_blank" style="color:var(--blue)">点此查看配置教程</a></p>
+          <div class="field-row">
+            <label class="field"><span>EmailJS Service ID</span><input type="text" id="jsService" placeholder="service_xxx"></label>
+            <label class="field"><span>EmailJS Template ID</span><input type="text" id="jsTemplate" placeholder="template_xxx"></label>
+          </div>
+          <label class="field"><span>EmailJS Public Key</span><input type="text" id="jsPublicKey" placeholder="YOUR_PUBLIC_KEY"></label>
+          <div class="form-tip">💡 不配 EmailJS 也能用，买家点"我已支付"后订单直接进你后台，你照常发货即可。邮件只是额外提醒。</div>
+        </div>
+
+        <div class="form-actions" style="margin-top:16px">
+          <button class="btn btn-primary" id="saveSettingsBtn">保存设置</button>
         </div>
       </div>
     </div>
@@ -1439,6 +1460,7 @@
   const ordKey=(e)=>`zx_orders_${e}`;
   const wdKey=(e)=>`zx_withdraws_${e}`;
   const paycodeKey=(e)=>`zx_paycode_${e}`;
+  const settingsKey=(e)=>`zx_settings_${e}`;
 
   const $=(s)=>document.querySelector(s);
   const $$=(s)=>document.querySelectorAll(s);
@@ -1761,6 +1783,7 @@
     tbody.closest('.table-wrap').style.display=orders.length?'block':'none';
     if(!orders.length)return;
     const statusMap={
+      pending_pay:['待买家付款','gray'],
       waiting_confirm:['待确认收款','blue'],
       shipped:['已发货','green'],
       refunded:['已退款','gray']
@@ -1771,7 +1794,8 @@
         ?`<span class="key-cell" title="${o.cardKey||''}">${o.cardKey?'****-****-****-'+o.cardKey.slice(-4):'—'}</span>`
         :'—';
       let actions='—';
-      if(o.status==='waiting_confirm')actions=`<button class="row-btn primary" data-confirm="${o.id}">确认收款并发货</button>`;
+      if(o.status==='pending_pay')actions=`<span style="color:#999;font-size:12px">等买家点"我已支付"</span>`;
+      else if(o.status==='waiting_confirm')actions=`<button class="row-btn primary" data-confirm="${o.id}">确认收款并发货</button>`;
       else if(o.status==='shipped')actions=`<button class="row-btn danger" data-refund="${o.id}">退款</button>`;
       return `<tr>
         <td style="font-family:monospace;font-size:12px">${o.id}</td>
@@ -2065,20 +2089,20 @@
       showToast('商家暂未配置收款方式，请稍后再试','err');return;
     }
 
-    // 创建订单（直接进入待商家确认状态，订单自动进商家后台）
+    // 创建订单（待买家点"我已支付"确认后进入商家后台）
     const orderId='ZX'+Date.now().toString().slice(-8);
     const merchOrders=store.get(ordKey(memail));
     merchOrders.push({
       id:orderId,productId:gid,productName:p.name,
-      buyer:nick,buyerPhone:phone,amount:p.price,status:'waiting_confirm',
-      cardKey:null,createdAt:Date.now(),buyerPaidAt:Date.now()
+      buyer:nick,buyerPhone:phone,amount:p.price,status:'pending_pay',
+      cardKey:null,createdAt:Date.now()
     });
     store.set(ordKey(memail),merchOrders);
     const buyerOrders=store.get(BUYER_ORDERS_KEY);
     buyerOrders.push({
       id:orderId,merchantEmail:memail,productId:gid,productName:p.name,shop,
       amount:p.price,buyerNick:nick,buyerPhone:phone,cardKey:null,
-      status:'waiting_confirm',createdAt:Date.now()
+      status:'pending_pay',createdAt:Date.now()
     });
     store.set(BUYER_ORDERS_KEY,buyerOrders);
 
@@ -2246,10 +2270,78 @@
   switchDashTab=function(name){
     _switchDashTab(name);
     if(name==='payment')renderPaycode();
+    if(name==='settings')renderSettings();
   };
 
-  // ========== 买家支付弹窗（展示收款码，买家扫码即可，订单已自动进商家后台） ==========
+  // ========== 店铺设置 ==========
+  function renderSettings(){
+    const s=store.get(settingsKey(curEmail))||{};
+    const merchants=store.get(USERS_KEY);
+    const m=merchants.find(x=>x.email===curEmail);
+    $('#shopName').value=s.shopName||curMerchant?.shop||'';
+    $('#shopContact').value=s.shopContact||m?.contact||'';
+    $('#shopEmail').value=s.shopEmail||'';
+    $('#jsService').value=s.jsService||'';
+    $('#jsTemplate').value=s.jsTemplate||'';
+    $('#jsPublicKey').value=s.jsPublicKey||'';
+  }
+  $('#saveSettingsBtn').addEventListener('click',()=>{
+    const s={
+      shopName:$('#shopName').value.trim(),
+      shopContact:$('#shopContact').value.trim(),
+      shopEmail:$('#shopEmail').value.trim(),
+      jsService:$('#jsService').value.trim(),
+      jsTemplate:$('#jsTemplate').value.trim(),
+      jsPublicKey:$('#jsPublicKey').value.trim()
+    };
+    store.set(settingsKey(curEmail),s);
+    // 同步更新商家基本信息
+    if(curMerchant){
+      const merchants=store.get(USERS_KEY);
+      const m=merchants.find(x=>x.email===curEmail);
+      if(m){
+        if(s.shopName)m.shop=s.shopName;
+        if(s.shopContact)m.contact=s.shopContact;
+        store.set(USERS_KEY,merchants);
+        curMerchant=m;
+      }
+    }
+    showToast('店铺设置已保存','ok');
+  });
+
+  // ========== 买家支付弹窗（展示收款码 + 我已支付按钮） ==========
   const payConfirmMask=$('#payConfirmMask');
+
+  // 邮件通知商家（EmailJS，可选）
+  async function notifyMerchantEmail(settings,orderInfo){
+    if(!settings||!settings.jsService||!settings.jsTemplate||!settings.jsPublicKey){
+      console.log('EmailJS 未配置，跳过邮件通知');return false;
+    }
+    try{
+      const res=await fetch('https://api.emailjs.com/api/v1.0/email/send',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          service_id:settings.jsService,
+          template_id:settings.jsTemplate,
+          user_id:settings.jsPublicKey,
+          template_params:{
+            to_email:settings.shopEmail,
+            shop_name:orderInfo.shop,
+            order_id:orderInfo.orderId,
+            product_name:orderInfo.goods,
+            amount:orderInfo.amount,
+            buyer_nick:orderInfo.buyerNick,
+            buyer_phone:orderInfo.buyerPhone,
+            pay_time:new Date().toLocaleString('zh-CN'),
+            message:`买家 ${orderInfo.buyerNick}(${orderInfo.buyerPhone}) 已扫码付款 ¥${orderInfo.amount}，商品：${orderInfo.goods}，请及时确认并发货！`
+          }
+        })
+      });
+      if(res.ok){console.log('邮件通知已发送');return true;}
+      else{console.warn('邮件发送失败:',await res.text());return false;}
+    }catch(e){console.warn('邮件发送异常:',e.message);return false;}
+  }
 
   function openPayConfirm(orderId,goods,shop,amount,paycode){
     const hasWx=!!paycode.wx,hasAli=!!paycode.ali;
@@ -2272,13 +2364,39 @@
       <div class="pay-order-id">订单号：${orderId}</div>
       <div style="margin-top:14px">${wxBox}${aliBox}</div>
       ${note}
-      <div style="font-size:12px;color:#999;margin-top:10px">💡 扫码付款后，商家将在后台确认收款并发货</div>
+      <div style="font-size:12px;color:#999;margin-top:10px">💡 扫码付款后，点击下方按钮通知商家发货</div>
       <div style="margin-top:16px">
-        <button class="btn btn-primary" id="payConfirmDone" style="width:100%;padding:12px">完成，等待发货</button>
+        <button class="btn btn-primary" id="buyerPaidBtn" style="width:100%;padding:12px">✅ 我已支付，通知商家</button>
+        <button class="btn btn-ghost" id="payConfirmCancel" style="width:100%;padding:12px;margin-top:8px">稍后再付</button>
       </div>
     `;
     payConfirmMask.classList.add('show');
-    $('#payConfirmDone').addEventListener('click',()=>payConfirmMask.classList.remove('show'));
+    $('#buyerPaidBtn').addEventListener('click',async ()=>{
+      // 更新所有商家订单状态
+      const merchants=store.get(USERS_KEY);
+      let buyerNick='',buyerPhone='',memail='';
+      merchants.forEach(m=>{
+        const orders=store.get(ordKey(m.email));
+        const o=orders.find(x=>x.id===orderId);
+        if(o){
+          o.status='waiting_confirm';o.buyerPaidAt=Date.now();
+          store.set(ordKey(m.email),orders);
+          buyerNick=o.buyer;buyerPhone=o.buyerPhone;memail=m.email;
+        }
+      });
+      // 更新买家订单
+      const bos=store.get(BUYER_ORDERS_KEY);
+      const bo=bos.find(x=>x.id===orderId);
+      if(bo){bo.status='waiting_confirm';bo.buyerPaidAt=Date.now();store.set(BUYER_ORDERS_KEY,bos);buyerNick=bo.buyerNick;buyerPhone=bo.buyerPhone;}
+      payConfirmMask.classList.remove('show');
+      showToast('✅ 已通知商家，请耐心等待发货','ok');
+      // 尝试发邮件通知商家（异步，不阻塞）
+      if(memail){
+        const s=store.get(settingsKey(memail))||{};
+        if(s.shopEmail)notifyMerchantEmail(s,{orderId,goods,shop,amount:fmtMoney(amount),buyerNick,buyerPhone});
+      }
+    });
+    $('#payConfirmCancel').addEventListener('click',()=>payConfirmMask.classList.remove('show'));
   }
 
   // ESC 关闭弹窗
