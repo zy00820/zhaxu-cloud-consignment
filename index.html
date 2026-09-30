@@ -1347,6 +1347,20 @@
           <div class="form-tip">💡 不配 EmailJS 也能用，买家点"我已支付"后订单直接进你后台，你照常发货即可。邮件只是额外提醒。</div>
         </div>
 
+        <div class="sub-form" style="margin-top:20px">
+          <h4>🔐 高级：跨浏览器同步 Token</h4>
+          <p class="form-tip">填入你的 GitHub Personal Access Token（只需要 <code>repo</code> 权限），即可实现：<br>
+          ① 买家从任意浏览器下单 → 订单立刻进你后台<br>
+          ② 你发货后 → 买家立刻在"我的订单"看到卡密<br>
+          ③ 收款码、商品库存实时同步</p>
+          <label class="field"><span>GitHub Token</span><input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxx"></label>
+          <div class="form-tip">
+            👉 <a href="https://github.com/settings/tokens/new" target="_blank" style="color:var(--blue)">点击创建 Token</a>，勾选 <code>repo</code> 权限即可。<br>
+            Token 只保存在你本机浏览器 localStorage，不会上传到任何服务器。<br>
+            <span style="color:#e67e22">⚠️ 不要把 Token 发给别人，不要提交到公开代码仓库。</span>
+          </div>
+        </div>
+
         <div class="form-actions" style="margin-top:16px">
           <button class="btn btn-primary" id="saveSettingsBtn">保存设置</button>
         </div>
@@ -2426,8 +2440,9 @@
     $('#jsService').value=s.jsService||'';
     $('#jsTemplate').value=s.jsTemplate||'';
     $('#jsPublicKey').value=s.jsPublicKey||'';
+    $('#ghToken').value=getGhToken()||'';
   }
-  $('#saveSettingsBtn').addEventListener('click',()=>{
+  $('#saveSettingsBtn').addEventListener('click',async ()=>{
     const s={
       shopName:$('#shopName').value.trim(),
       shopContact:$('#shopContact').value.trim(),
@@ -2437,6 +2452,9 @@
       jsPublicKey:$('#jsPublicKey').value.trim()
     };
     store.set(settingsKey(curMerchant.email),s);
+    // 保存 GitHub Token（跨浏览器同步）
+    const token=$('#ghToken').value.trim();
+    setGhToken(token);
     // 同步更新商家基本信息
     if(curMerchant){
       const merchants=store.get(USERS_KEY);
@@ -2448,7 +2466,13 @@
         curMerchant=m;
       }
     }
-    showToast('店铺设置已保存','ok');
+    // 同步店铺信息到 shop-data.json
+    const sd=await fetchShopData();
+    if(sd){
+      const m=sd.merchants.find(x=>x.email===curMerchant.email);
+      if(m){m.shop=s.shopName||curMerchant.shop;if(s.shopEmail)m.payNote=s.payNote||'';ghUpdateFile('shop-data.json',sd,'update shop info');}
+    }
+    showToast(token?'店铺设置已保存，跨浏览器同步已启用':'店铺设置已保存','ok');
   });
 
   // ========== 买家支付弹窗（展示收款码 + 我已支付按钮） ==========
