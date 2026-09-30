@@ -347,6 +347,16 @@
   .auth-foot{text-align:center;font-size:13px;color:var(--muted);margin-top:14px}
   .auth-foot a{color:var(--blue);font-weight:600}
 
+  /* 货源提示横幅 */
+  .notice-box{
+    display:flex;align-items:flex-start;gap:10px;padding:12px 14px;margin-bottom:20px;
+    border-radius:12px;background:linear-gradient(135deg,rgba(201,162,75,.12),rgba(231,200,120,.1));
+    border:1px solid rgba(201,162,75,.35);
+  }
+  .notice-ic{font-size:20px;line-height:1.3;flex:none}
+  .notice-text{font-size:13px;line-height:1.55;color:var(--text)}
+  .notice-text b{color:var(--gold);font-weight:700}
+
   /* dashboard */
   .dash-head{display:flex;align-items:center;gap:14px;padding:24px 26px 18px;border-bottom:1px solid var(--line)}
   .dash-av{
@@ -798,6 +808,12 @@
         <div class="auth-title">免费开通商家店铺 🎉</div>
         <div class="auth-sub">3 分钟完成注册，首月手续费 0%</div>
       </div>
+      <div class="notice-box">
+        <span class="notice-ic">📦</span>
+        <div class="notice-text">
+          <b>温馨提示：</b>平台不提供货源，商家需<b>自备激活码/卡密货源</b>，注册后在后台批量上传即可自动发货。
+        </div>
+      </div>
       <label class="field">
         <span>店铺名称</span>
         <input type="text" name="shop" placeholder="如：数码优品官方店" required minlength="2">
@@ -828,7 +844,7 @@
       </div>
       <label class="field check">
         <input type="checkbox" name="agree" required>
-        <span>我已阅读并同意 <a href="#">《栈序商家服务协议》</a> 与 <a href="#">《隐私政策》</a></span>
+        <span>我已阅读并同意 <a href="#">《栈序商家服务协议》</a> 与 <a href="#">《隐私政策》</a>，且确认<b>货源由本人自备</b>，与平台无关。</span>
       </label>
       <button type="submit" class="btn btn-primary full">免费注册并开店</button>
       <div class="auth-foot">已有商家账号？<a href="#" data-switch="login">直接登录</a></div>
