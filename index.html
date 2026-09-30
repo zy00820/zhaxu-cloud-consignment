@@ -2259,18 +2259,15 @@
     showToast('收款说明已保存','ok');
   });
 
-  // renderDash 时调用 renderPaycode
-  const _renderDash=renderDash;
-  renderDash=function(){
-    _renderDash();
-    if($('.dash-pane[data-pane="payment"]')?.classList.contains('active'))renderPaycode();
-  };
-  // 切换到 payment 标签时渲染
+  // 切换标签时渲染对应面板数据
   const _switchDashTab=switchDashTab;
   switchDashTab=function(name){
     _switchDashTab(name);
     if(name==='payment')renderPaycode();
     if(name==='settings')renderSettings();
+    if(name==='cards')renderProducts();
+    if(name==='orders')renderOrders();
+    if(name==='wallet')renderWithdraws();
   };
 
   // ========== 店铺设置 ==========
