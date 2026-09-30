@@ -1774,7 +1774,21 @@
   });
 
   // ========== 订单管理 ==========
-  function renderOrders(){
+  async function renderOrders(){
+    // 先从 GitHub 同步最新订单（跨浏览器）
+    const remote=await fetchOrders();
+    if(remote.length){
+      const local=getOrders();
+      // 合并：远程优先（包含买家刚下单的新订单）
+      const merged=remote.filter(o=>o.merchantEmail===curMerchant.email).map(ro=>{
+        const lo=local.find(x=>x.id===ro.id);
+        return lo?Object.assign({},ro,lo):ro;
+      });
+      // 加上本地独有的（如模拟订单）
+      const localOnly=local.filter(o=>!remote.find(r=>r.id===o.id));
+      const all=merged.concat(localOnly);
+      setOrders(all);
+    }
     const filter=$('#orderFilter')?.value||'all';
     let orders=getOrders().slice().sort((a,b)=>b.createdAt-a.createdAt);
     if(filter!=='all')orders=orders.filter(o=>o.status===filter);
@@ -1855,7 +1869,7 @@
   }
 
   // 商家确认收款 → 触发自动发货
-  function confirmPay(id){
+  async function confirmPay(id){
     const orders=getOrders();const o=orders.find(x=>x.id===id);
     if(!o){return;}
     if(o.status!=='waiting_confirm'){showToast('该订单状态不可确认','err');return;}
@@ -1864,7 +1878,18 @@
     const r=autoShip(o);
     setOrders(orders);
     renderOrders();renderProducts();renderCards();refreshStats();
+    // 同步发货状态 + 卡密到 GitHub（买家可在"我的订单"看到）
     if(r.ok){
+      const all=await fetchOrders();
+      const ro=all.find(x=>x.id===id);
+      if(ro){
+        ro.status='shipped';ro.cardKey=r.card.key;ro.shippedAt=Date.now();ro.shipOrderId=r.card.id;
+      }else{
+        all.push({id:o.id,productId:o.productId,productName:o.productName,merchantEmail:o.merchantEmail||curMerchant.email,shop:o.shop||curMerchant.shop,buyer:o.buyer,buyerPhone:o.buyerPhone,amount:o.amount,status:'shipped',cardKey:r.card.key,createdAt:o.createdAt,buyerPaidAt:o.buyerPaidAt,paidAt:Date.now(),shippedAt:Date.now()});
+      }
+      ghSyncOrders(all);
+      // 同步 shop-data.json 的卡密状态
+      ghShipCard(o.productId, id);
       showToast(`确认收款成功，已自动发货，卡密：${r.card.key.slice(-8)}`,'ok');
     }else{
       showToast(`确认收款成功，但${r.msg}，请手动处理`,'err');
@@ -1973,6 +1998,90 @@
     showToast('提现申请已撤销','ok');
   }
 
+  // ========== 共享数据（GitHub 仓库作为后端）==========
+  // 跨浏览器同步需要商家在"店铺设置-高级"里填入 GitHub Token
+  // 无 Token 时降级为本地模式（仅同一浏览器可用）
+  const GH_CONFIG = {
+    repo: 'zy00820/zhaxu-cloud-consignment',
+    token: '' // ← 商家在后台"店铺设置"里填入自己的 GitHub Token
+  };
+  const ghTokenKey='zx_gh_token';
+  const getGhToken=()=>localStorage.getItem(ghTokenKey)||GH_CONFIG.token;
+  const setGhToken=(t)=>{if(t)localStorage.setItem(ghTokenKey,t);else localStorage.removeItem(ghTokenKey)};
+
+  // 公开读取 shop-data.json（所有浏览器无需 token）
+  async function fetchShopData(){
+    try{
+      const r=await fetch('shop-data.json?t='+Date.now());
+      if(r.ok)return await r.json();
+    }catch(e){}
+    return null;
+  }
+
+  // 公开读取 orders.json（需要 token 写入）
+  async function fetchOrders(){
+    try{
+      const r=await fetch('orders.json?t='+Date.now());
+      if(r.ok)return await r.json();
+    }catch(e){}
+    return [];
+  }
+
+  // 通过 GitHub API 更新仓库文件（需要 token）
+  async function ghUpdateFile(path, newContent, message='update'){
+    const token=getGhToken();
+    if(!token){console.warn('[GH] no token, skip write');return null;}
+    try{
+      // 1. 获取当前文件 SHA
+      const g=await fetch(`https://api.github.com/repos/${GH_CONFIG.repo}/contents/${path}`,{
+        headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}
+      });
+      if(g.status===404){
+        // 文件不存在，直接创建
+        const r=await fetch(`https://api.github.com/repos/${GH_CONFIG.repo}/contents/${path}`,{
+          method:'PUT',
+          headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+          body:JSON.stringify({
+            message:'update '+path,
+            content:btoa(unescape(encodeURIComponent(typeof newContent==='string'?newContent:JSON.stringify(newContent))))
+          })
+        });
+        return r.ok;
+      }
+      if(!g.ok){console.warn('[GH] get fail',g.status);return null;}
+      const data=await g.json();
+      // 2. 更新文件
+      const r=await fetch(`https://api.github.com/repos/${GH_CONFIG.repo}/contents/${path}`,{
+        method:'PUT',
+        headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+        body:JSON.stringify({
+          message:'update '+path+' @'+new Date().toISOString(),
+          content:btoa(unescape(encodeURIComponent(typeof newContent==='string'?newContent:JSON.stringify(newContent)))),
+          sha:data.sha
+        })
+      });
+      return r.ok;
+    }catch(e){console.error('[GH] update err',e);return null;}
+  }
+
+  // 同步订单到 GitHub（追加新订单）
+  async function ghSyncOrders(allOrders){
+    return ghUpdateFile('orders.json', allOrders, 'sync orders');
+  }
+
+  // 卡密发放：从 shop-data.json 取卡并标记已售
+  async function ghShipCard(productId, orderId){
+    const sd=await fetchShopData();
+    if(!sd)return null;
+    const idx=sd.cards.findIndex(c=>c.productId===productId&&c.status==='available');
+    if(idx<0)return null;
+    sd.cards[idx].status='sold';
+    sd.cards[idx].orderId=orderId;
+    sd.cards[idx].soldAt=Date.now();
+    await ghUpdateFile('shop-data.json', sd, 'ship card');
+    return sd.cards[idx];
+  }
+
   // ========== 买家商城 ==========
   const BUYER_ORDERS_KEY='zx_buyer_orders';
   const catIcon={'软件激活码':'🔑','游戏礼品卡':'🎮','会员兑换码':'🎬','API与云服务':'☁️','网课激活码':'📚','电商购物卡':'🛍️','其他':'🎁'};
@@ -2009,11 +2118,20 @@
   async function renderMarket(){
     const body=$('#marketBody');
     let goods=[];
-    if(API_BASE){
-      const r=await api('/api/market/products');
-      if(r&&r.ok){goods=r.goods;}
+    // 优先从 GitHub 共享文件读取（所有浏览器都能看到）
+    const sd=await fetchShopData();
+    if(sd&&sd.products&&sd.products.length){
+      sd.products.forEach(p=>{
+        if(p.status!=='active')return;
+        const avail=sd.cards.filter(c=>c.productId===p.id&&c.status==='available').length;
+        if(avail>0){
+          const m=sd.merchants.find(x=>x.email===p.merchantEmail);
+          goods.push({id:p.id,name:p.name,category:p.category,price:p.price,stock:avail,merchantEmail:p.merchantEmail,shop:m?m.shop:'未知店铺'});
+        }
+      });
     }
-    if(!API_BASE||!goods.length){
+    // 本地 localStorage 兜底（商家自己浏览器里也能看到未同步的商品）
+    if(!goods.length){
       const merchants=getUsers();
       merchants.forEach(m=>{
         const products=store.get(prodKey(m.email));
@@ -2074,7 +2192,7 @@
 
   // 买家下单 → 创建订单(待商家确认) → 展示收款码 → 扫码付款 → 商家确认并发货
   const resultMask=$('#resultMask');
-  $('#payBtn').addEventListener('click',()=>{
+  $('#payBtn').addEventListener('click',async ()=>{
     const nick=$('#buyNick').value.trim();
     const phone=$('#buyPhone').value.trim();
     if(!nick){showToast('请输入买家昵称','err');return;}
@@ -2083,8 +2201,17 @@
     const {gid,memail,p,shop,stock}=curBuyGoods;
     if(stock<=0){showToast('手慢了，商品已售罄','err');buyMask.classList.remove('show');renderMarket();return;}
 
-    // 读取商家收款码
-    const paycode=store.get(paycodeKey(memail))||{wx:'',ali:'',note:''};
+    // 读取商家收款码：优先从 GitHub 共享文件
+    let paycode={wx:'',ali:'',note:''};
+    const sd=await fetchShopData();
+    if(sd){
+      const m=sd.merchants.find(x=>x.email===memail);
+      if(m){paycode={wx:m.wxPaycode||'',ali:m.aliPaycode||'',note:m.payNote||''};}
+    }
+    // 本地兜底
+    if(!paycode.wx&&!paycode.ali){
+      paycode=store.get(paycodeKey(memail))||{wx:'',ali:'',note:''};
+    }
     if(!paycode.wx&&!paycode.ali){
       showToast('商家暂未配置收款方式，请稍后再试','err');return;
     }
@@ -2157,9 +2284,21 @@
       const r=await api('/api/buyer/orders/'+phone);
       if(r&&r.ok)list=r.orders;
     }
-    if(!API_BASE||!list){
+    // 从 GitHub 共享文件读取（跨浏览器）
+    if(!list.length){
+      const remote=await fetchOrders();
+      list=remote.filter(o=>o.buyerPhone===phone);
+    }
+    // 本地兜底
+    if(!list.length){
       list=store.get(BUYER_ORDERS_KEY).filter(o=>o.buyerPhone===phone);
     }
+    // 合并本地已有卡密（优先显示）
+    const bos=store.get(BUYER_ORDERS_KEY);
+    list.forEach(o=>{
+      const local=bos.find(b=>b.id===o.id);
+      if(local&&local.cardKey&&!o.cardKey)o.cardKey=local.cardKey;
+    });
     list.sort((a,b)=>b.createdAt-a.createdAt);
     const box=$('#buyerOrderList');
     $('#marketBody').classList.add('hidden');
@@ -2188,7 +2327,7 @@
           <span class="bo-id">订单号：${o.id}</span>
           <span class="tag ${cls}">${txt}</span>
         </div>
-        <div class="bo-name">${o.productName} <span style="color:var(--muted);font-weight:400;font-size:12px">· ${o.shop}</span></div>
+        <div class="bo-name">${o.productName} <span style="color:var(--muted);font-weight:400;font-size:12px">· ${o.shop||''}</span></div>
         ${keyBox}
         <div class="bo-meta">
           <span>${fmtTime(o.createdAt)}</span>
@@ -2225,18 +2364,24 @@
     $('#payNote').value=p.note||'';
   }
 
-  function setupPaycodeUpload(inputId,type){
+  async function setupPaycodeUpload(inputId,type){
     const input=$('#'+inputId);
-    input?.addEventListener('change',(e)=>{
+    input?.addEventListener('change',async (e)=>{
       const file=e.target.files[0];if(!file)return;
       if(file.size>2*1024*1024){showToast('图片不能超过 2MB','err');return;}
       const reader=new FileReader();
-      reader.onload=(ev)=>{
+      reader.onload=async (ev)=>{
         const p=getPaycode();
         p[type]=ev.target.result;
         setPaycode(p);
+        // 同步到 GitHub shop-data.json（买家才能看到收款码）
+        const sd=await fetchShopData();
+        if(sd){
+          const m=sd.merchants.find(x=>x.email===curMerchant.email);
+          if(m){m.wxPaycode=p.wx;m.aliPaycode=p.ali;m.payNote=p.note||'';await ghUpdateFile('shop-data.json',sd,'update paycode');}
+        }
         renderPaycode();
-        showToast('收款码已保存','ok');
+        showToast('收款码已保存并同步','ok');
       };
       reader.readAsDataURL(file);
       input.value='';
@@ -2369,9 +2514,9 @@
     `;
     payConfirmMask.classList.add('show');
     $('#buyerPaidBtn').addEventListener('click',async ()=>{
-      // 更新所有商家订单状态
+      // 更新所有商家订单状态（本地）
       const merchants=store.get(USERS_KEY);
-      let buyerNick='',buyerPhone='',memail='';
+      let buyerNick='',buyerPhone='',memail='',orderData=null;
       merchants.forEach(m=>{
         const orders=store.get(ordKey(m.email));
         const o=orders.find(x=>x.id===orderId);
@@ -2379,15 +2524,27 @@
           o.status='waiting_confirm';o.buyerPaidAt=Date.now();
           store.set(ordKey(m.email),orders);
           buyerNick=o.buyer;buyerPhone=o.buyerPhone;memail=m.email;
+          orderData={id:o.id,productId:o.productId,productName:o.productName,
+            merchantEmail:m.email,shop:m.shop,buyer:o.buyer,buyerPhone:o.buyerPhone,
+            amount:o.amount,status:'waiting_confirm',cardKey:null,
+            createdAt:o.createdAt,buyerPaidAt:Date.now()};
         }
       });
-      // 更新买家订单
+      // 更新买家订单（本地）
       const bos=store.get(BUYER_ORDERS_KEY);
       const bo=bos.find(x=>x.id===orderId);
-      if(bo){bo.status='waiting_confirm';bo.buyerPaidAt=Date.now();store.set(BUYER_ORDERS_KEY,bos);buyerNick=bo.buyerNick;buyerPhone=bo.buyerPhone;}
+      if(bo){bo.status='waiting_confirm';bo.buyerPaidAt=Date.now();store.set(BUYER_ORDERS_KEY,bos);buyerNick=bo.buyerNick;buyerPhone=bo.buyerPhone;if(!orderData)orderData={id:bo.id,productId:bo.productId,productName:bo.productName,merchantEmail:memail||bo.merchantEmail,shop:bo.shop,buyer:bo.buyerNick,buyerPhone:bo.buyerPhone,amount:bo.amount,status:'waiting_confirm',cardKey:null,createdAt:bo.createdAt,buyerPaidAt:Date.now()};}
       payConfirmMask.classList.remove('show');
+      // 同步到 GitHub orders.json（跨浏览器）
+      if(orderData){
+        const all=await fetchOrders();
+        const exist=all.find(x=>x.id===orderId);
+        if(!exist)all.push(orderData);
+        else Object.assign(exist,orderData);
+        ghSyncOrders(all);
+      }
       showToast('✅ 已通知商家，请耐心等待发货','ok');
-      // 尝试发邮件通知商家（异步，不阻塞）
+      // 尝试发邮件通知商家
       if(memail){
         const s=store.get(settingsKey(memail))||{};
         if(s.shopEmail)notifyMerchantEmail(s,{orderId,goods,shop,amount:fmtMoney(amount),buyerNick,buyerPhone});

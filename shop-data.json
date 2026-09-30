@@ -1,0 +1,37 @@
+{
+  "version": "1.0",
+  "updated": "2026-09-30T00:00:00Z",
+  "merchants": [
+    {
+      "email": "zy00820@outlook.com",
+      "shop": "栈序云寄售旗舰店",
+      "wxPaycode": "",
+      "aliPaycode": "",
+      "payNote": "扫码付款后点「我已支付」"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_toolkit_pro",
+      "merchantEmail": "zy00820@outlook.com",
+      "name": "全能工具箱Pro",
+      "category": "软件激活码",
+      "price": 5,
+      "desc": "包含100+实用小工具的集合版",
+      "stockWarn": 5,
+      "status": "active"
+    }
+  ],
+  "cards": [
+    {"id":"card_001","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-A2024-XK7M","status":"available","created":1727600000000},
+    {"id":"card_002","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-B2024-LP9Q","status":"available","created":1727600000000},
+    {"id":"card_003","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-C2024-RN3W","status":"available","created":1727600000000},
+    {"id":"card_004","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-D2024-VB5Y","status":"available","created":1727600000000},
+    {"id":"card_005","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-E2024-HK8Z","status":"available","created":1727600000000},
+    {"id":"card_006","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-F2024-MN4L","status":"available","created":1727600000000},
+    {"id":"card_007","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-G2024-QP7X","status":"available","created":1727600000000},
+    {"id":"card_008","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-H2024-TY2A","status":"available","created":1727600000000},
+    {"id":"card_009","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-I2024-EC6D","status":"available","created":1727600000000},
+    {"id":"card_010","productId":"prod_toolkit_pro","code":"TOOLKIT-PRO-J2024-WF9G","status":"available","created":1727600000000}
+  ]
+}
