@@ -483,7 +483,114 @@
   .toast.ok{background:var(--green)}
   .toast.err{background:#d33}
 
+  /* ===== 买家商城 ===== */
+  .market-mask{
+    position:fixed;inset:0;background:rgba(11,18,32,.6);backdrop-filter:blur(6px);
+    z-index:200;display:none;align-items:stretch;justify-content:center;
+    animation:fadein .25s ease;
+  }
+  .market-mask.show{display:flex}
+  .market-panel{
+    background:#f5f7fc;width:100%;max-width:1100px;display:flex;flex-direction:column;
+    box-shadow:0 -20px 60px rgba(0,0,0,.3);
+  }
+  .market-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 24px;background:#fff;border-bottom:1px solid var(--line);flex:none;
+  }
+  .market-title{font-size:17px;font-weight:800;color:var(--ink)}
+  .market-actions{display:flex;align-items:center;gap:12px}
+  .mk-btn{
+    padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;
+    font-size:13px;font-weight:600;cursor:pointer;transition:.2s;color:var(--text);
+  }
+  .mk-btn:hover{border-color:var(--blue);color:var(--blue)}
+  .mk-close{
+    width:34px;height:34px;border-radius:50%;border:none;background:#f1f4fb;color:var(--muted);
+    font-size:22px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.2s;
+  }
+  .mk-close:hover{background:var(--blue);color:#fff;transform:rotate(90deg)}
+  .market-body{flex:1;overflow-y:auto;padding:24px}
+  .market-loading{text-align:center;color:var(--muted);padding:60px;font-size:14px}
+
+  /* 商品网格 */
+  .market-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+  .goods-card{
+    background:#fff;border-radius:16px;overflow:hidden;transition:.25s;cursor:pointer;
+    border:1px solid var(--line);display:flex;flex-direction:column;
+  }
+  .goods-card:hover{transform:translateY(-4px);box-shadow:0 16px 36px -16px rgba(20,30,80,.3);border-color:var(--blue)}
+  .goods-thumb{
+    height:140px;background:linear-gradient(135deg,var(--cloud),#dbe7ff);
+    display:grid;place-items:center;font-size:44px;position:relative;
+  }
+  .goods-thumb .stock-tag{
+    position:absolute;top:10px;right:10px;padding:3px 10px;border-radius:999px;
+    font-size:11px;font-weight:700;background:rgba(22,163,74,.92);color:#fff;
+  }
+  .goods-thumb .stock-tag.low{background:#f59e0b}
+  .goods-info{padding:14px 16px 16px;flex:1;display:flex;flex-direction:column}
+  .goods-cat{font-size:11.5px;color:var(--muted);margin-bottom:4px}
+  .goods-name{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;line-height:1.35;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:40px}
+  .goods-shop{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .goods-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:auto}
+  .goods-price{font-size:20px;font-weight:800;color:var(--gold)}
+  .goods-price small{font-size:12px;font-weight:500;color:var(--muted);margin-right:2px}
+  .goods-buy{
+    padding:7px 16px;border-radius:999px;background:linear-gradient(135deg,var(--blue),var(--blue-2));
+    color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:.2s;
+  }
+  .goods-buy:hover{opacity:.88;transform:scale(1.04)}
+  .goods-buy:disabled{background:#ccc;cursor:not-allowed;transform:none}
+
+  /* 下单弹窗 */
+  .buy-summary{background:#f7f9ff;border-radius:12px;padding:14px 16px;margin-bottom:16px}
+  .bs-row{display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px}
+  .bs-row span{color:var(--muted)}
+  .bs-row b{color:var(--ink);font-weight:600}
+
+  /* 支付成功弹窗 */
+  .result-modal{max-width:460px;text-align:center;padding:30px 28px}
+  .result-icon{font-size:56px;margin-bottom:12px}
+  .result-title{font-size:22px;font-weight:800;color:var(--ink)}
+  .result-sub{font-size:14px;color:var(--muted);margin:6px 0 20px}
+  .result-card{
+    background:linear-gradient(135deg,#0e1530,#1a2550);border-radius:16px;padding:22px;
+    margin-bottom:16px;color:#fff;
+  }
+  .rc-label{font-size:13px;opacity:.8;margin-bottom:10px}
+  .rc-key{
+    font-family:"SF Mono",Menlo,Consolas,monospace;font-size:22px;font-weight:700;
+    letter-spacing:2px;color:var(--gold-2);word-break:break-all;margin-bottom:14px;
+  }
+  .result-tip{font-size:12.5px;color:var(--muted);margin-bottom:18px}
+  .result-actions{display:flex;gap:10px;justify-content:center}
+
+  /* 买家订单 */
+  .buyer-order{
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px;
+  }
+  .bo-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .bo-id{font-family:monospace;font-size:12.5px;color:var(--muted)}
+  .bo-name{font-size:15px;font-weight:700;margin-bottom:8px}
+  .bo-key-box{
+    background:#0e1530;color:#cdd6f6;border-radius:10px;padding:10px 14px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;
+  }
+  .bo-key{font-family:"SF Mono",Menlo,monospace;font-size:13px;color:var(--gold-2);word-break:break-all}
+  .bo-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+  .bo-amount{color:var(--gold);font-weight:700}
+
   @media(max-width:560px){
+    .market-panel{margin:0;border-radius:0}
+    .market-grid{grid-template-columns:1fr 1fr}
+    .goods-thumb{height:110px;font-size:34px}
+    .result-modal{padding:24px 18px}
+    .rc-key{font-size:17px}
+  }
+
+  @media(max-width:980px){
     .field-row{grid-template-columns:1fr}
     .dash-stats{grid-template-columns:repeat(2,1fr)}
     .product-list{grid-template-columns:1fr 1fr}
@@ -527,6 +634,7 @@
       <a href="#flow">发货流程</a>
       <a href="#category">热门品类</a>
       <a href="#voice">用户评价</a>
+      <a href="#" id="navMarket">买家商城</a>
       <a href="#" id="navMerchant">商家入驻</a>
     </div>
     <a href="#join" class="nav-cta">立即挂码</a>
@@ -1137,6 +1245,80 @@
 <!-- toast -->
 <div class="toast" id="toast"></div>
 
+<!-- ===== 买家商城 ===== -->
+<div class="market-mask" id="marketMask">
+  <div class="market-panel">
+    <div class="market-head">
+      <div class="market-title">🛒 栈序云寄售 · 买家商城</div>
+      <div class="market-actions">
+        <button class="mk-btn" id="myOrdersBtn">📦 我的订单</button>
+        <button class="mk-close" data-close-market>×</button>
+      </div>
+    </div>
+
+    <!-- 商品列表 -->
+    <div class="market-body" id="marketBody">
+      <div class="market-loading">加载商品中…</div>
+    </div>
+
+    <!-- 我的订单 -->
+    <div class="market-body hidden" id="myOrdersBody">
+      <div class="panel-bar">
+        <div class="panel-title">📋 我的订单</div>
+        <button class="btn btn-ghost sm" id="backToMarketBtn">← 返回商城</button>
+      </div>
+      <div id="buyerOrderList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 下单确认弹窗 -->
+<div class="modal-mask" id="buyMask">
+  <div class="modal buy-modal">
+    <button class="modal-close" data-close-buy>×</button>
+    <div class="auth-head">
+      <div class="auth-title">确认订单</div>
+      <div class="auth-sub" id="buyProductName">—</div>
+    </div>
+    <div class="buy-summary">
+      <div class="bs-row"><span>商品</span><b id="bsName">—</b></div>
+      <div class="bs-row"><span>分类</span><b id="bsCat">—</b></div>
+      <div class="bs-row"><span>店铺</span><b id="bsShop">—</b></div>
+      <div class="bs-row"><span>单价</span><b style="color:var(--gold)" id="bsPrice">¥0.00</b></div>
+      <div class="bs-row"><span>库存</span><b id="bsStock">—</b></div>
+    </div>
+    <label class="field">
+      <span>买家昵称（用于查单）</span>
+      <input type="text" id="buyNick" placeholder="如：小明" required>
+    </label>
+    <label class="field">
+      <span>联系手机</span>
+      <input type="tel" id="buyPhone" placeholder="11 位手机号" required pattern="[0-9]{11}">
+    </label>
+    <p class="form-tip">支付成功后系统将自动发货，卡密会立即显示在本页面，同时可在「我的订单」中查看。</p>
+    <button class="btn btn-primary full" id="payBtn">立即支付</button>
+  </div>
+</div>
+
+<!-- 支付成功/卡密展示弹窗 -->
+<div class="modal-mask" id="resultMask">
+  <div class="modal result-modal">
+    <div class="result-icon">✅</div>
+    <div class="result-title">支付成功，已自动发货</div>
+    <div class="result-sub" id="resultProduct">—</div>
+    <div class="result-card">
+      <div class="rc-label">您的卡密</div>
+      <div class="rc-key" id="resultKey">—</div>
+      <button class="btn btn-ghost sm" id="copyKeyBtn">📋 复制卡密</button>
+    </div>
+    <div class="result-tip">请妥善保管，卡密一经售出不退不换。可在「我的订单」中随时查看。</div>
+    <div class="result-actions">
+      <button class="btn btn-primary" id="resultDoneBtn">完成</button>
+      <button class="btn btn-ghost" id="viewMyOrdersBtn">查看我的订单</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // 原页面滚动与动画
   const nav=document.getElementById('nav');
@@ -1656,9 +1838,181 @@
     showToast('提现申请已撤销','ok');
   }
 
+  // ========== 买家商城 ==========
+  const BUYER_ORDERS_KEY='zx_buyer_orders';
+  const catIcon={'软件激活码':'🔑','游戏礼品卡':'🎮','会员兑换码':'🎬','API与云服务':'☁️','网课激活码':'📚','电商购物卡':'🛍️','其他':'🎁'};
+
+  // 打开买家商城
+  const marketMask=$('#marketMask');
+  function openMarket(){
+    marketMask.classList.add('show');
+    renderMarket();
+  }
+  $('#navMarket').addEventListener('click',(e)=>{e.preventDefault();openMarket()});
+  $$('[data-close-market]').forEach(b=>b.addEventListener('click',()=>marketMask.classList.remove('show')));
+  marketMask.addEventListener('click',(e)=>{if(e.target===marketMask)marketMask.classList.remove('show')});
+
+  // 渲染商城商品：遍历所有商家的在售商品
+  function renderMarket(){
+    const body=$('#marketBody');
+    const merchants=getUsers();
+    const goods=[];
+    merchants.forEach(m=>{
+      const products=store.get(prodKey(m.email));
+      const cards=store.get(cardKey(m.email));
+      products.forEach(p=>{
+        const avail=cards.filter(c=>c.productId===p.id&&c.status==='available').length;
+        if(avail>0){
+          goods.push({
+            id:p.id,name:p.name,category:p.category,price:p.price,
+            stock:avail,merchantEmail:m.email,shop:m.shop,
+            icon:catIcon[p.category]||'🎁'
+          });
+        }
+      });
+    });
+    if(!goods.length){
+      body.innerHTML='<div class="market-loading">🛒 暂无在售商品，商家正在上架中…</div>';
+      return;
+    }
+    body.innerHTML=`<div class="market-grid">${goods.map(g=>`
+      <div class="goods-card" data-gid="${g.id}" data-memail="${g.merchantEmail}">
+        <div class="goods-thumb">${g.icon}
+          <span class="stock-tag ${g.stock<=5?'low':''}">库存 ${g.stock}</span>
+        </div>
+        <div class="goods-info">
+          <div class="goods-cat">${g.category}</div>
+          <div class="goods-name">${g.name}</div>
+          <div class="goods-shop">🏪 ${g.shop}</div>
+          <div class="goods-bottom">
+            <div class="goods-price"><small>¥</small>${fmtMoney(g.price)}</div>
+            <button class="goods-buy" data-buy="${g.id}" data-memail="${g.merchantEmail}">立即购买</button>
+          </div>
+        </div>
+      </div>
+    `).join('')}</div>`;
+    body.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      openBuy(b.dataset.buy,b.dataset.memail);
+    }));
+  }
+
+  // 下单确认
+  let curBuyGoods=null;
+  const buyMask=$('#buyMask');
+  function openBuy(gid,memail){
+    const products=store.get(prodKey(memail));
+    const cards=store.get(cardKey(memail));
+    const p=products.find(x=>x.id===gid);
+    if(!p){showToast('商品不存在','err');return;}
+    const avail=cards.filter(c=>c.productId===gid&&c.status==='available').length;
+    if(avail<=0){showToast('该商品已售罄','err');renderMarket();return;}
+    const m=getUsers().find(u=>u.email===memail);
+    curBuyGoods={gid,memail,p,shop:m?.shop||'未知店铺',stock:avail};
+    $('#bsName').textContent=p.name;
+    $('#bsCat').textContent=p.category;
+    $('#bsShop').textContent=m?.shop||'—';
+    $('#bsPrice').textContent='¥'+fmtMoney(p.price);
+    $('#bsStock').textContent=avail;
+    $('#buyNick').value='';$('#buyPhone').value='';
+    buyMask.classList.add('show');
+  }
+  $$('[data-close-buy]').forEach(b=>b.addEventListener('click',()=>buyMask.classList.remove('show')));
+  buyMask.addEventListener('click',(e)=>{if(e.target===buyMask)buyMask.classList.remove('show')});
+
+  // 支付 → 自动发货
+  const resultMask=$('#resultMask');
+  $('#payBtn').addEventListener('click',()=>{
+    const nick=$('#buyNick').value.trim();
+    const phone=$('#buyPhone').value.trim();
+    if(!nick){showToast('请输入买家昵称','err');return;}
+    if(!/^1\d{10}$/.test(phone)){showToast('请输入正确的手机号','err');return;}
+    if(!curBuyGoods)return;
+    const {gid,memail,p,shop,stock}=curBuyGoods;
+    if(stock<=0){showToast('手慢了，商品已售罄','err');buyMask.classList.remove('show');renderMarket();return;}
+    // 取卡密
+    const cards=store.get(cardKey(memail));
+    const card=cards.find(c=>c.productId===gid&&c.status==='available');
+    if(!card){showToast('库存不足','err');buyMask.classList.remove('show');renderMarket();return;}
+    // 标记已售
+    card.status='sold';card.orderId='ZX'+Date.now().toString().slice(-8);card.soldAt=Date.now();
+    store.set(cardKey(memail),cards);
+    // 写入商家订单
+    const merchOrders=store.get(ordKey(memail));
+    merchOrders.push({
+      id:card.orderId,productId:gid,productName:p.name,
+      buyer:nick,buyerPhone:phone,amount:p.price,status:'shipped',
+      cardKey:card.key,createdAt:Date.now(),shippedAt:Date.now()
+    });
+    store.set(ordKey(memail),merchOrders);
+    // 写入买家订单
+    const buyerOrders=store.get(BUYER_ORDERS_KEY);
+    buyerOrders.push({
+      id:card.orderId,merchantEmail:memail,productId:gid,productName:p.name,shop,
+      amount:p.price,buyerNick:nick,buyerPhone:phone,cardKey:card.key,
+      status:'shipped',createdAt:Date.now()
+    });
+    store.set(BUYER_ORDERS_KEY,buyerOrders);
+    // 展示结果
+    buyMask.classList.remove('show');
+    $('#resultProduct').textContent=`${p.name} · ${shop}`;
+    $('#resultKey').textContent=card.key;
+    resultMask.classList.add('show');
+    renderMarket();
+  });
+
+  // 复制卡密
+  $('#copyKeyBtn').addEventListener('click',()=>copyText($('#resultKey').textContent,'卡密已复制到剪贴板'));
+  $('#resultDoneBtn').addEventListener('click',()=>resultMask.classList.remove('show'));
+  $('#viewMyOrdersBtn').addEventListener('click',()=>{
+    resultMask.classList.remove('show');
+    showBuyerOrders();
+  });
+
+  // 我的订单（按手机号查询）
+  $('#myOrdersBtn').addEventListener('click',showBuyerOrders);
+  $('#backToMarketBtn').addEventListener('click',()=>{
+    $('#myOrdersBody').classList.add('hidden');
+    $('#marketBody').classList.remove('hidden');
+  });
+
+  function showBuyerOrders(){
+    const phone=prompt('请输入下单时的手机号，查询您的订单：');
+    if(!phone)return;
+    const list=store.get(BUYER_ORDERS_KEY).filter(o=>o.buyerPhone===phone).sort((a,b)=>b.createdAt-a.createdAt);
+    const box=$('#buyerOrderList');
+    $('#marketBody').classList.add('hidden');
+    $('#myOrdersBody').classList.remove('hidden');
+    if(!list.length){
+      box.innerHTML='<div class="market-loading">暂无该手机号的订单记录</div>';
+      return;
+    }
+    box.innerHTML=list.map(o=>`
+      <div class="buyer-order">
+        <div class="bo-head">
+          <span class="bo-id">订单号：${o.id}</span>
+          <span class="tag green">已发货</span>
+        </div>
+        <div class="bo-name">${o.productName} <span style="color:var(--muted);font-weight:400;font-size:12px">· ${o.shop}</span></div>
+        <div class="bo-key-box">
+          <span class="bo-key">${o.cardKey}</span>
+          <button class="btn btn-ghost sm" data-copybo="${o.id}">复制</button>
+        </div>
+        <div class="bo-meta">
+          <span>${fmtTime(o.createdAt)}</span>
+          <span class="bo-amount">¥${fmtMoney(o.amount)}</span>
+        </div>
+      </div>
+    `).join('');
+    box.querySelectorAll('[data-copybo]').forEach(b=>b.addEventListener('click',()=>{
+      const o=list.find(x=>x.id===b.dataset.copybo);
+      if(o)copyText(o.cardKey,'卡密已复制');
+    }));
+  }
+
   // ESC 关闭弹窗
   document.addEventListener('keydown',(e)=>{
-    if(e.key==='Escape'){authMask.classList.remove('show');dashMask.classList.remove('show')}
+    if(e.key==='Escape'){authMask.classList.remove('show');dashMask.classList.remove('show');marketMask.classList.remove('show');buyMask.classList.remove('show');resultMask.classList.remove('show')}
   });
 </script>
 </body>
