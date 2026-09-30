@@ -1842,6 +1842,24 @@
   const BUYER_ORDERS_KEY='zx_buyer_orders';
   const catIcon={'软件激活码':'🔑','游戏礼品卡':'🎮','会员兑换码':'🎬','API与云服务':'☁️','网课激活码':'📚','电商购物卡':'🛍️','其他':'🎁'};
 
+  // 后端 API 地址（部署后端后填入，例如 https://your-app.onrender.com）
+  // 留空则使用前端本地模拟支付
+  const API_BASE = '';
+
+  // 调用后端 API
+  async function api(path, options = {}) {
+    try {
+      const res = await fetch(API_BASE + path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+      return await res.json();
+    } catch (e) {
+      return null; // 后端不可用
+    }
+  }
+
   // 打开买家商城
   const marketMask=$('#marketMask');
   function openMarket(){
@@ -1852,32 +1870,35 @@
   $$('[data-close-market]').forEach(b=>b.addEventListener('click',()=>marketMask.classList.remove('show')));
   marketMask.addEventListener('click',(e)=>{if(e.target===marketMask)marketMask.classList.remove('show')});
 
-  // 渲染商城商品：遍历所有商家的在售商品
-  function renderMarket(){
+  // 渲染商城商品：优先从后端获取，否则遍历本地商家
+  async function renderMarket(){
     const body=$('#marketBody');
-    const merchants=getUsers();
-    const goods=[];
-    merchants.forEach(m=>{
-      const products=store.get(prodKey(m.email));
-      const cards=store.get(cardKey(m.email));
-      products.forEach(p=>{
-        const avail=cards.filter(c=>c.productId===p.id&&c.status==='available').length;
-        if(avail>0){
-          goods.push({
-            id:p.id,name:p.name,category:p.category,price:p.price,
-            stock:avail,merchantEmail:m.email,shop:m.shop,
-            icon:catIcon[p.category]||'🎁'
-          });
-        }
+    let goods=[];
+    if(API_BASE){
+      const r=await api('/api/market/products');
+      if(r&&r.ok){goods=r.goods;}
+    }
+    if(!API_BASE||!goods.length){
+      const merchants=getUsers();
+      merchants.forEach(m=>{
+        const products=store.get(prodKey(m.email));
+        const cards=store.get(cardKey(m.email));
+        products.forEach(p=>{
+          const avail=cards.filter(c=>c.productId===p.id&&c.status==='available').length;
+          if(avail>0){
+            goods.push({id:p.id,name:p.name,category:p.category,price:p.price,stock:avail,merchantEmail:m.email,shop:m.shop});
+          }
+        });
       });
-    });
+    }
     if(!goods.length){
       body.innerHTML='<div class="market-loading">🛒 暂无在售商品，商家正在上架中…</div>';
       return;
     }
-    body.innerHTML=`<div class="market-grid">${goods.map(g=>`
-      <div class="goods-card" data-gid="${g.id}" data-memail="${g.merchantEmail}">
-        <div class="goods-thumb">${g.icon}
+    body.innerHTML=`<div class="market-grid">${goods.map(g=>{
+      const icon=catIcon[g.category]||'🎁';
+      return `<div class="goods-card" data-gid="${g.id}" data-memail="${g.merchantEmail}">
+        <div class="goods-thumb">${icon}
           <span class="stock-tag ${g.stock<=5?'low':''}">库存 ${g.stock}</span>
         </div>
         <div class="goods-info">
@@ -1889,40 +1910,36 @@
             <button class="goods-buy" data-buy="${g.id}" data-memail="${g.merchantEmail}">立即购买</button>
           </div>
         </div>
-      </div>
-    `).join('')}</div>`;
+      </div>`;
+    }).join('')}</div>`;
     body.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',(e)=>{
       e.stopPropagation();
-      openBuy(b.dataset.buy,b.dataset.memail);
+      const g=goods.find(x=>x.id===b.dataset.buy&&x.merchantEmail===b.dataset.memail);
+      openBuy(g);
     }));
   }
 
   // 下单确认
   let curBuyGoods=null;
   const buyMask=$('#buyMask');
-  function openBuy(gid,memail){
-    const products=store.get(prodKey(memail));
-    const cards=store.get(cardKey(memail));
-    const p=products.find(x=>x.id===gid);
-    if(!p){showToast('商品不存在','err');return;}
-    const avail=cards.filter(c=>c.productId===gid&&c.status==='available').length;
-    if(avail<=0){showToast('该商品已售罄','err');renderMarket();return;}
-    const m=getUsers().find(u=>u.email===memail);
-    curBuyGoods={gid,memail,p,shop:m?.shop||'未知店铺',stock:avail};
-    $('#bsName').textContent=p.name;
-    $('#bsCat').textContent=p.category;
-    $('#bsShop').textContent=m?.shop||'—';
-    $('#bsPrice').textContent='¥'+fmtMoney(p.price);
-    $('#bsStock').textContent=avail;
+  function openBuy(g){
+    if(!g){showToast('商品不存在','err');return;}
+    if(g.stock<=0){showToast('该商品已售罄','err');renderMarket();return;}
+    curBuyGoods={gid:g.id,memail:g.merchantEmail,p:{id:g.id,name:g.name,category:g.category,price:g.price},shop:g.shop,stock:g.stock};
+    $('#bsName').textContent=g.name;
+    $('#bsCat').textContent=g.category;
+    $('#bsShop').textContent=g.shop;
+    $('#bsPrice').textContent='¥'+fmtMoney(g.price);
+    $('#bsStock').textContent=g.stock;
     $('#buyNick').value='';$('#buyPhone').value='';
     buyMask.classList.add('show');
   }
   $$('[data-close-buy]').forEach(b=>b.addEventListener('click',()=>buyMask.classList.remove('show')));
   buyMask.addEventListener('click',(e)=>{if(e.target===buyMask)buyMask.classList.remove('show')});
 
-  // 支付 → 自动发货
+  // 支付 → 优先调用后端真实支付，后端不可用时降级为本地模拟
   const resultMask=$('#resultMask');
-  $('#payBtn').addEventListener('click',()=>{
+  $('#payBtn').addEventListener('click',async ()=>{
     const nick=$('#buyNick').value.trim();
     const phone=$('#buyPhone').value.trim();
     if(!nick){showToast('请输入买家昵称','err');return;}
@@ -1930,14 +1947,51 @@
     if(!curBuyGoods)return;
     const {gid,memail,p,shop,stock}=curBuyGoods;
     if(stock<=0){showToast('手慢了，商品已售罄','err');buyMask.classList.remove('show');renderMarket();return;}
-    // 取卡密
+
+    const payBtn=$('#payBtn');
+    payBtn.disabled=true;payBtn.textContent='处理中…';
+
+    if(API_BASE){
+      // 调用后端创建支付订单
+      const r=await api('/api/pay/create',{method:'POST',body:{
+        productId:gid,merchantEmail:memail,buyerNick:nick,buyerPhone:phone,payMethod:'alipay'
+      }});
+      if(r&&r.ok){
+        if(r.payMethod==='alipay'&&r.formHtml){
+          // 真实支付宝支付：打开新窗口提交表单
+          buyMask.classList.remove('show');
+          showToast('正在跳转支付宝支付…','ok');
+          const w=window.open('','_blank');
+          w.document.write(r.formHtml);
+          w.document.close();
+          // 轮询订单状态
+          pollOrder(r.orderId);
+          payBtn.disabled=false;payBtn.textContent='立即支付';
+          return;
+        }
+        if(r.payMethod==='mock'){
+          // 后端模拟支付
+          const m=await api('/api/pay/mock/'+r.orderId,{method:'POST'});
+          if(m&&m.ok){
+            showResult(p.name,shop,m.cardKey);
+            renderMarket();
+          }else{
+            showToast((m&&m.msg)||'支付失败','err');
+          }
+          payBtn.disabled=false;payBtn.textContent='立即支付';
+          return;
+        }
+      }
+      // 后端返回错误，降级为本地模拟
+      showToast('支付服务暂不可用，使用模拟支付','err');
+    }
+
+    // ========== 本地模拟支付（无后端时使用） ==========
     const cards=store.get(cardKey(memail));
     const card=cards.find(c=>c.productId===gid&&c.status==='available');
-    if(!card){showToast('库存不足','err');buyMask.classList.remove('show');renderMarket();return;}
-    // 标记已售
+    if(!card){showToast('库存不足','err');payBtn.disabled=false;payBtn.textContent='立即支付';return;}
     card.status='sold';card.orderId='ZX'+Date.now().toString().slice(-8);card.soldAt=Date.now();
     store.set(cardKey(memail),cards);
-    // 写入商家订单
     const merchOrders=store.get(ordKey(memail));
     merchOrders.push({
       id:card.orderId,productId:gid,productName:p.name,
@@ -1945,7 +1999,6 @@
       cardKey:card.key,createdAt:Date.now(),shippedAt:Date.now()
     });
     store.set(ordKey(memail),merchOrders);
-    // 写入买家订单
     const buyerOrders=store.get(BUYER_ORDERS_KEY);
     buyerOrders.push({
       id:card.orderId,merchantEmail:memail,productId:gid,productName:p.name,shop,
@@ -1953,13 +2006,33 @@
       status:'shipped',createdAt:Date.now()
     });
     store.set(BUYER_ORDERS_KEY,buyerOrders);
-    // 展示结果
-    buyMask.classList.remove('show');
-    $('#resultProduct').textContent=`${p.name} · ${shop}`;
-    $('#resultKey').textContent=card.key;
-    resultMask.classList.add('show');
+    showResult(p.name,shop,card.key);
     renderMarket();
+    payBtn.disabled=false;payBtn.textContent='立即支付';
   });
+
+  function showResult(productName,shop,cardKey){
+    buyMask.classList.remove('show');
+    $('#resultProduct').textContent=`${productName} · ${shop}`;
+    $('#resultKey').textContent=cardKey;
+    resultMask.classList.add('show');
+  }
+
+  // 真实支付后轮询订单状态
+  function pollOrder(orderId){
+    let count=0;
+    const timer=setInterval(async()=>{
+      count++;
+      const r=await api('/api/pay/status/'+orderId);
+      if(r&&r.shipped){
+        clearInterval(timer);
+        showResult(r.productName,r.shop,r.cardKey);
+      }else if(count>60){ // 最多等 2 分钟
+        clearInterval(timer);
+        showToast('支付超时，请在「我的订单」中查看','err');
+      }
+    },2000);
+  }
 
   // 复制卡密
   $('#copyKeyBtn').addEventListener('click',()=>copyText($('#resultKey').textContent,'卡密已复制到剪贴板'));
@@ -1976,10 +2049,18 @@
     $('#marketBody').classList.remove('hidden');
   });
 
-  function showBuyerOrders(){
+  async function showBuyerOrders(){
     const phone=prompt('请输入下单时的手机号，查询您的订单：');
     if(!phone)return;
-    const list=store.get(BUYER_ORDERS_KEY).filter(o=>o.buyerPhone===phone).sort((a,b)=>b.createdAt-a.createdAt);
+    let list=[];
+    if(API_BASE){
+      const r=await api('/api/buyer/orders/'+phone);
+      if(r&&r.ok)list=r.orders;
+    }
+    if(!API_BASE||!list){
+      list=store.get(BUYER_ORDERS_KEY).filter(o=>o.buyerPhone===phone);
+    }
+    list.sort((a,b)=>b.createdAt-a.createdAt);
     const box=$('#buyerOrderList');
     $('#marketBody').classList.add('hidden');
     $('#myOrdersBody').classList.remove('hidden');
