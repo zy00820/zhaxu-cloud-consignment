@@ -2399,6 +2399,29 @@
     $('#payConfirmCancel').addEventListener('click',()=>payConfirmMask.classList.remove('show'));
   }
 
+  // ========== 启动引导：自动创建商家账号 + 预配置 ==========
+  (function bootstrap(){
+    const DEMO_EMAIL='zy291817@outlook.com';
+    const DEMO_SHOP='栈序云寄售旗舰店';
+    const DEMO_PASS='123456';
+    const users=getUsers();
+    let me=users.find(u=>u.email===DEMO_EMAIL);
+    if(!me){
+      me={shop:DEMO_SHOP,contact:'店主',email:DEMO_EMAIL,password:DEMO_PASS,createdAt:Date.now()};
+      users.push(me);saveUsers(users);
+      console.log('已自动创建演示商家账号');
+    }
+    // 预配置店铺设置（邮箱）
+    const settings=store.get(settingsKey(DEMO_EMAIL))||{};
+    if(!settings.shopEmail)settings.shopEmail=DEMO_EMAIL;
+    settings.shopName=settings.shopName||DEMO_SHOP;
+    store.set(settingsKey(DEMO_EMAIL),settings);
+    // 预配置收款说明
+    const pc=store.get(paycodeKey(DEMO_EMAIL))||{};
+    if(!pc.note)pc.note='扫码付款后，请点「✅ 我已支付，通知商家」，我会在邮箱收到提醒后立即确认并发货。如需加急请在下单后联系微信。';
+    store.set(paycodeKey(DEMO_EMAIL),pc);
+  })();
+
   // ESC 关闭弹窗
   document.addEventListener('keydown',(e)=>{
     if(e.key==='Escape'){authMask.classList.remove('show');dashMask.classList.remove('show');marketMask.classList.remove('show');buyMask.classList.remove('show');resultMask.classList.remove('show');payConfirmMask.classList.remove('show')}
