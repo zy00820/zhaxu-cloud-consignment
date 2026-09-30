@@ -16,7 +16,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ============ 数据存储（JSON 文件，生产建议换数据库） ============
-const DATA_DIR = path.join(__dirname, 'data');
+// Vercel Serverless 只读文件系统，用 /tmp；其他环境用 ./data
+const IS_SERVERLESS = process.env.VERCEL || process.env.ZEABUR || false;
+const DATA_DIR = IS_SERVERLESS ? path.join('/tmp', 'zhaxu_data') : path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function readJSON(file, def = []) {

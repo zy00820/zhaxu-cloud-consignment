@@ -1,51 +1,44 @@
 # 栈序云寄售 - 后端部署指南
 
-## 快速部署（Render，免费）
+## 推荐方案（免信用卡）
 
-### 步骤 1：注册 Render 账号
-访问 https://render.com ，用 GitHub 账号登录（免费）。
+### 方案 A：Zeabur（国内友好，中文界面，首选）
 
-### 步骤 2：导入 Blueprint 一键部署
-1. 点击右上角 **New** → **Blueprint**
-2. 选择你的仓库 `zhaxu-cloud-consignment`
-3. Render 会自动读取 `render.yaml`，点击 **Apply**
+1. **注册账号**：打开 https://zeabur.com ，用 GitHub 登录
+2. **新建服务**：点击 **新建部署** → **从 Git 仓库部署** → 选择 `zhaxu-cloud-consignment`
+3. **配置环境变量**（在服务设置 → 环境变量中添加）：
 
-### 步骤 3：配置环境变量
-在 Render 控制台 → 你的服务 → **Environment** 中填写：
+| Key | Value | 说明 |
+|-----|-------|------|
+| `PORT` | `3000` | 端口 |
+| `ALLOW_MOCK` | `true` | 先开模拟支付跑通流程 |
+| `ALIPAY_GATEWAY` | `https://openapi-sandbox.dl.alipaydev.com/gateway.do` | 支付宝沙箱 |
 
-**支付宝支付**（先申请 https://open.alipay.com）：
-```
-ALIPAY_APP_ID       = 你的应用 AppID
-ALIPAY_PRIVATE_KEY  = 你的应用私钥（完整 PEM，含 -----BEGIN/END-----）
-ALIPAY_PUBLIC_KEY   = 支付宝公钥
-ALIPAY_NOTIFY_URL   = https://你的服务名.onrender.com/api/pay/alipay/notify
-ALIPAY_RETURN_URL   = https://你的服务名.onrender.com/api/pay/alipay/return
-```
+> 真实支付密钥（`ALIPAY_APP_ID`、`ALIPAY_PRIVATE_KEY`、`WX_APPID` 等）等你申请到支付资质再填。
 
-**微信支付**（先申请 https://pay.weixin.qq.com）：
-```
-WX_APPID     = 公众号/小程序 AppID
-WX_MCHID     = 商户号
-WX_APIKEY    = API 密钥
-WX_NOTIFY_URL = https://你的服务名.onrender.com/api/pay/wechat/notify
-```
+4. **部署**：点击 **部署**，等 1 分钟左右
+5. **拿到域名**：Zeabur 会给你一个 `xxx.zeabur.app` 域名，发我这个地址我帮你改前端
 
-> 不想现在配置真实支付？`ALLOW_MOCK=true`（默认）会启用模拟支付，可先跑通流程。
+---
 
-### 步骤 4：更新前端后端地址
-部署成功后，Render 会给你一个域名，例如：
-```
-https://zhaxu-cloud-consignment.onrender.com
-```
-把 `index.html` 中的 `API_BASE` 改为这个地址：
-```js
-const API_BASE = 'https://zhaxu-cloud-consignment.onrender.com';
-```
-提交并推送到 GitHub，GitHub Pages 会自动更新。
+### 方案 B：Vercel（国际老牌）
 
-### 步骤 5：配置支付回调
-- **支付宝**：登录支付宝开放平台 → 应用 → 回调地址 → 填入上面的 `ALIPAY_NOTIFY_URL`
-- **微信支付**：登录微信支付商户平台 → 产品中心 → 开发配置 → 填入 `WX_NOTIFY_URL`
+1. **安装 Vercel CLI**：`npm i -g vercel`
+2. **登录**：`vercel login`
+3. **在项目目录运行**：`vercel` → 一路回车（用默认配置）
+4. **配置环境变量**：`vercel env add ALLOW_MOCK` → 输入 `true`
+5. **生产部署**：`vercel --prod`
+6. **拿到域名**：`xxx.vercel.app` 发我
+
+> 也可以直接在 https://vercel.com 网页端导入 GitHub 仓库，零配置部署。
+
+---
+
+### 方案 C：Render（需信用卡验证）
+
+如果你有美元信用卡：
+1. https://render.com → New → Blueprint → 选择仓库
+2. 自动读取 `render.yaml` 一键部署
 
 ---
 
@@ -53,40 +46,42 @@ const API_BASE = 'https://zhaxu-cloud-consignment.onrender.com';
 
 ```bash
 npm install
-cp .env.example .env   # 编辑 .env 填入你的配置
-npm start
+cp .env.example .env   # 编辑 .env
+npm start              # 运行在 http://localhost:3000
 ```
-后端运行在 http://localhost:3000
-
----
 
 ## API 接口
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
-| GET | `/api/market/products` | 商城在售商品列表 |
+| GET | `/api/market/products` | 商城在售商品 |
 | POST | `/api/pay/create` | 创建支付订单 |
 | POST | `/api/pay/mock/:orderId` | 模拟支付（触发自动发货）|
 | POST | `/api/pay/alipay/notify` | 支付宝异步回调 |
 | POST | `/api/pay/wechat/notify` | 微信支付异步回调 |
-| GET | `/api/pay/status/:orderId` | 查询订单发货状态 |
+| GET | `/api/pay/status/:orderId` | 查询订单状态 |
 | GET | `/api/buyer/orders/:phone` | 买家按手机号查订单 |
 
----
+## 接入真实支付（可选）
 
-## 自动发货流程
+等你有了支付宝/微信商户资质，在 Zeabur/Vercel 的环境变量里填入：
 
+**支付宝**（https://open.alipay.com 申请）：
 ```
-买家下单 → 创建支付订单(pending_pay)
-   ↓
-支付宝/微信支付成功 → 回调通知后端
-   ↓
-后端验签 → 标记订单已支付
-   ↓
-autoShip()：取可用卡密 → 标记已售 → 写商家订单 + 买家订单
-   ↓
-前端轮询订单状态 → 展示卡密给买家
+ALIPAY_APP_ID       = 你的 AppID
+ALIPAY_PRIVATE_KEY  = 应用私钥（完整 PEM）
+ALIPAY_PUBLIC_KEY   = 支付宝公钥
+ALIPAY_NOTIFY_URL   = https://你的域名/api/pay/alipay/notify
+ALIPAY_RETURN_URL   = https://你的域名/api/pay/alipay/return
 ```
 
-> **幂等保证**：`autoShip` 按订单号加锁，同一订单只会发货一次，避免重复发卡。
+**微信支付**（https://pay.weixin.qq.com 申请）：
+```
+WX_APPID      = AppID
+WX_MCHID      = 商户号
+WX_APIKEY     = API 密钥
+WX_NOTIFY_URL = https://你的域名/api/pay/wechat/notify
+```
+
+然后去支付宝/微信后台把回调地址配好即可。

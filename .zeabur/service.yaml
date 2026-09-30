@@ -1,0 +1,6 @@
+name: zhaxu-cloud-consignment
+runtime: node
+startCommand: node server.js
+buildCommand: npm install
+healthCheckPath: /api/health
+plan: free
