@@ -456,6 +456,21 @@
   .row-btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
   .row-btn.primary:hover{opacity:.85;color:#fff}
 
+  /* 钱包卡片 */
+  .wallet-card{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:22px 24px;border-radius:16px;margin-bottom:18px;
+    background:linear-gradient(135deg,var(--blue) 0%,#3a2db0 60%,#7a3aa0 100%);
+    color:#fff;position:relative;overflow:hidden;
+  }
+  .wallet-card::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.1)}
+  .wallet-card>*{position:relative;z-index:2}
+  .wallet-label{font-size:13px;opacity:.85}
+  .wallet-amount{font-size:32px;font-weight:800;margin:6px 0;letter-spacing:-1px}
+  .wallet-sub{font-size:12px;opacity:.7}
+  .wallet-card .btn-primary{background:#fff;color:var(--blue);box-shadow:none;white-space:nowrap}
+  .wallet-card .btn-primary:hover{opacity:.92}
+
   #logoutBtn{margin:0 26px 24px;width:calc(100% - 52px)}
 
   /* toast */
@@ -953,6 +968,7 @@
       <button class="dash-tab active" data-dtab="overview">概览</button>
       <button class="dash-tab" data-dtab="cards">卡密管理</button>
       <button class="dash-tab" data-dtab="orders">订单管理</button>
+      <button class="dash-tab" data-dtab="wallet">钱包提现</button>
       <button class="dash-tab" data-dtab="settings">店铺设置</button>
     </div>
 
@@ -1036,6 +1052,7 @@
           <div class="order-filter">
             <select id="orderFilter">
               <option value="all">全部订单</option>
+              <option value="pending_pay">待付款</option>
               <option value="paid">待发货</option>
               <option value="shipped">已发货</option>
               <option value="refunded">已退款</option>
@@ -1052,6 +1069,54 @@
         <div id="orderEmpty" class="empty-hint small hidden">
           <div class="empty-ic">🧾</div>
           <p>暂无订单，点击「模拟买家下单」测试自动发货流程</p>
+        </div>
+      </div>
+
+      <!-- 钱包提现 -->
+      <div class="dash-pane" data-pane="wallet">
+        <div class="wallet-card">
+          <div class="wallet-left">
+            <div class="wallet-label">可提现余额（元）</div>
+            <div class="wallet-amount" id="walletBalance">¥0.00</div>
+            <div class="wallet-sub">已结算订单收入，可申请提现</div>
+          </div>
+          <button class="btn btn-primary" id="openWithdrawBtn">申请提现</button>
+        </div>
+
+        <!-- 提现申请表单 -->
+        <div class="sub-form hidden" id="withdrawForm">
+          <h4>申请提现</h4>
+          <div class="field-row">
+            <label class="field"><span>提现金额</span><input type="number" id="wdAmount" placeholder="最低 10 元" step="0.01" min="10"></label>
+            <label class="field"><span>收款方式</span>
+              <select id="wdType">
+                <option value="alipay">支付宝</option>
+                <option value="bank">银行卡</option>
+                <option value="wechat">微信</option>
+              </select>
+            </label>
+          </div>
+          <label class="field"><span>收款人姓名</span><input type="text" id="wdName" placeholder="真实姓名" required></label>
+          <label class="field"><span>收款账号</span><input type="text" id="wdAccount" placeholder="支付宝账号 / 银行卡号 / 微信号" required></label>
+          <p class="form-tip" id="wdTip">提现申请提交后，平台将在 1-3 个工作日内审核打款，手续费 0%（首月）。</p>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="submitWithdrawBtn">提交申请</button>
+            <button class="btn btn-ghost" id="cancelWithdrawBtn">取消</button>
+          </div>
+        </div>
+
+        <div class="panel-bar" style="margin-top:20px">
+          <div class="panel-title">💸 提现记录</div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>申请单号</th><th>金额</th><th>收款方式</th><th>收款账号</th><th>状态</th><th>申请时间</th><th>操作</th></tr></thead>
+            <tbody id="withdrawTableBody"></tbody>
+          </table>
+        </div>
+        <div id="withdrawEmpty" class="empty-hint small hidden">
+          <div class="empty-ic">💳</div>
+          <p>暂无提现记录</p>
         </div>
       </div>
 
@@ -1088,6 +1153,7 @@
   const prodKey=(e)=>`zx_products_${e}`;
   const cardKey=(e)=>`zx_cardkeys_${e}`;
   const ordKey=(e)=>`zx_orders_${e}`;
+  const wdKey=(e)=>`zx_withdraws_${e}`;
 
   const $=(s)=>document.querySelector(s);
   const $$=(s)=>document.querySelectorAll(s);
@@ -1200,11 +1266,11 @@
   function openDashboard(){
     if(!curMerchant)return;
     document.getElementById('dashShop').textContent=curMerchant.shop;
-    // 默认显示概览
     switchDashTab('overview');
     refreshStats();
     renderProducts();
     renderOrders();
+    renderWithdraws();
     dashMask.classList.add('show');
   }
 
@@ -1223,17 +1289,28 @@
   const setCards=(v)=>store.set(cardKey(curMerchant.email),v);
   const getOrders=()=>store.get(ordKey(curMerchant.email));
   const setOrders=(v)=>store.set(ordKey(curMerchant.email),v);
+  const getWithdraws=()=>store.get(wdKey(curMerchant.email));
+  const setWithdraws=(v)=>store.set(wdKey(curMerchant.email),v);
+
+  // 计算可提现余额 = 已发货订单总收入 - 已提现(含审核中)总额
+  function calcBalance(){
+    const income=getOrders().filter(o=>o.status==='shipped').reduce((s,o)=>s+o.amount,0);
+    const withdrawn=getWithdraws().filter(w=>w.status!=='rejected').reduce((s,w)=>s+w.amount,0);
+    return Math.max(0,income-withdrawn);
+  }
 
   // 刷新统计
   function refreshStats(){
     const cards=getCards(), orders=getOrders();
     const stock=cards.filter(c=>c.status==='available').length;
     const sold=cards.filter(c=>c.status==='sold').length;
-    const balance=orders.filter(o=>o.status==='shipped').reduce((s,o)=>s+o.amount,0);
+    const balance=calcBalance();
     $('#stBalance').textContent='¥'+fmtMoney(balance);
     $('#stOrders').textContent=orders.length;
     $('#stStock').textContent=stock;
     $('#stSold').textContent=sold;
+    const wb=$('#walletBalance');
+    if(wb)wb.textContent='¥'+fmtMoney(balance);
   }
 
   // ========== 商品管理 ==========
@@ -1398,17 +1475,21 @@
     $('#orderEmpty').classList.toggle('hidden',orders.length>0);
     tbody.closest('.table-wrap').style.display=orders.length?'block':'none';
     if(!orders.length)return;
-    const statusMap={paid:['待发货','blue'],shipped:['已发货','green'],refunded:['已退款','gray']};
+    const statusMap={
+      pending_pay:['待付款','gray'],
+      paid:['待发货','blue'],
+      shipped:['已发货','green'],
+      refunded:['已退款','gray']
+    };
     tbody.innerHTML=orders.map(o=>{
-      const [txt,cls]=statusMap[o.status];
-      const cardCell=o.status==='shipped'
+      const [txt,cls]=statusMap[o.status]||[o.status,'gray'];
+      const cardCell=(o.status==='shipped')
         ?`<span class="key-cell" title="${o.cardKey||''}">${o.cardKey?'****-****-****-'+o.cardKey.slice(-4):'—'}</span>`
         :'—';
-      const actions=o.status==='paid'
-        ?`<button class="row-btn primary" data-ship="${o.id}">立即发货</button>`
-        :o.status==='shipped'
-        ?`<button class="row-btn danger" data-refund="${o.id}">退款</button>`
-        :'—';
+      let actions='—';
+      if(o.status==='pending_pay')actions=`<button class="row-btn primary" data-pay="${o.id}">模拟支付</button>`;
+      else if(o.status==='paid')actions=`<button class="row-btn primary" data-ship="${o.id}">立即发货</button>`;
+      else if(o.status==='shipped')actions=`<button class="row-btn danger" data-refund="${o.id}">退款</button>`;
       return `<tr>
         <td style="font-family:monospace;font-size:12px">${o.id}</td>
         <td>${o.productName}</td>
@@ -1420,50 +1501,77 @@
         <td>${actions}</td>
       </tr>`;
     }).join('');
+    tbody.querySelectorAll('[data-pay]').forEach(b=>b.addEventListener('click',()=>payOrder(b.dataset.pay)));
     tbody.querySelectorAll('[data-ship]').forEach(b=>b.addEventListener('click',()=>shipOrder(b.dataset.ship)));
     tbody.querySelectorAll('[data-refund]').forEach(b=>b.addEventListener('click',()=>refundOrder(b.dataset.refund)));
     tbody.querySelectorAll('.key-cell').forEach(td=>td.addEventListener('click',()=>{
-      const id=td.closest('tr').querySelector('[data-ship]')?.dataset.ship;
+      const row=td.closest('tr');
+      const id=row.querySelector('[data-ship]')?.dataset.ship||row.querySelector('[data-refund]')?.dataset.refund;
       const order=getOrders().find(o=>o.id===id);
       if(order&&order.cardKey)copyText(order.cardKey,'卡密已复制');
     }));
   }
   $('#orderFilter').addEventListener('change',renderOrders);
 
-  // 模拟买家下单（自动发货闭环）
+  // 模拟买家下单（创建待付款订单）
   $('#simOrderBtn').addEventListener('click',()=>{
     const products=getProducts();
     if(!products.length){showToast('请先添加商品','err');switchDashTab('cards');return;}
-    // 随机选一个有可用卡密的商品
     const cards=getCards();
     const withStock=products.filter(p=>cards.some(c=>c.productId===p.id&&c.status==='available'));
     if(!withStock.length){showToast('所有商品库存不足，请先上传卡密','err');switchDashTab('cards');return;}
     const p=withStock[Math.floor(Math.random()*withStock.length)];
-    // 自动取卡 + 发货
-    const card=cards.find(c=>c.productId===p.id&&c.status==='available');
-    card.status='sold';card.orderId='ZX'+Date.now().toString().slice(-8);card.soldAt=Date.now();
     const order={
-      id:card.orderId,productId:p.id,productName:p.name,
+      id:'ZX'+Date.now().toString().slice(-8),
+      productId:p.id,productName:p.name,
       buyer:'buyer_'+Math.random().toString(36).slice(2,8),
-      amount:p.price,status:'shipped',cardKey:card.key,
-      createdAt:Date.now(),shippedAt:Date.now()
+      amount:p.price,status:'pending_pay',cardKey:null,
+      createdAt:Date.now()
     };
-    const orderList=getOrders();orderList.push(order);setOrders(orderList);
-    setCards(cards);
-    renderOrders();renderProducts();refreshStats();
-    showToast(`模拟下单成功，已自动发货：${p.name}`,'ok');
+    const list=getOrders();list.push(order);setOrders(list);
+    renderOrders();refreshStats();
+    showToast(`买家已下单：${p.name}，等待付款 → 点击「模拟支付」触发自动发货`,'ok');
   });
+
+  // 自动发货核心：从卡密池取可用卡密 → 标记已售 → 订单置已发货
+  // 幂等：同一订单只发一次，已发货订单直接返回
+  function autoShip(o){
+    if(o.status!=='paid')return {ok:false,msg:'订单状态非待发货'};
+    const cards=getCards();
+    // 取该商品第一张可用卡密
+    const card=cards.find(c=>c.productId===o.productId&&c.status==='available');
+    if(!card)return {ok:false,msg:'库存不足，无可用卡密'};
+    // 原子更新：卡密标记已售 + 关联订单 + 订单置已发货
+    card.status='sold';card.orderId=o.id;card.soldAt=Date.now();
+    o.status='shipped';o.cardKey=card.key;o.shippedAt=Date.now();
+    setCards(cards);
+    return {ok:true,card};
+  }
+
+  // 模拟支付 → 触发自动发货
+  function payOrder(id){
+    const orders=getOrders();const o=orders.find(x=>x.id===id);
+    if(!o){return;}
+    if(o.status!=='pending_pay'){showToast('该订单状态不可支付','err');return;}
+    o.status='paid';o.paidAt=Date.now();
+    // 付款成功后自动发货
+    const r=autoShip(o);
+    setOrders(orders);
+    renderOrders();renderProducts();renderCards();refreshStats();
+    if(r.ok){
+      showToast(`支付成功，已自动发货，卡密：${r.card.key.slice(-8)}`,'ok');
+    }else{
+      showToast(`支付成功，但${r.msg}，请手动处理`,'err');
+    }
+  }
 
   // 手动发货（待发货订单）
   function shipOrder(id){
     const orders=getOrders();const o=orders.find(x=>x.id===id);if(!o)return;
-    const cards=getCards();
-    const card=cards.find(c=>c.productId===o.productId&&c.status==='available');
-    if(!card){showToast('该商品无可用卡密','err');return;}
-    card.status='sold';card.orderId=id;card.soldAt=Date.now();
-    o.status='shipped';o.cardKey=card.key;o.shippedAt=Date.now();
-    setCards(cards);setOrders(orders);
-    renderOrders();renderProducts();refreshStats();
+    const r=autoShip(o);
+    if(!r.ok){showToast(r.msg,'err');return;}
+    setOrders(orders);
+    renderOrders();renderProducts();renderCards();refreshStats();
     showToast('发货成功，卡密已推送买家','ok');
   }
 
@@ -1476,8 +1584,76 @@
     if(card){card.status='available';card.orderId=null;card.soldAt=null;}
     o.status='refunded';
     setCards(cards);setOrders(orders);
-    renderOrders();renderProducts();refreshStats();
+    renderOrders();renderProducts();renderCards();refreshStats();
     showToast('退款成功，卡密已回库','ok');
+  }
+
+  // ========== 钱包提现 ==========
+  function renderWithdraws(){
+    const list=getWithdraws().slice().sort((a,b)=>b.createdAt-a.createdAt);
+    const tbody=$('#withdrawTableBody');
+    $('#withdrawEmpty').classList.toggle('hidden',list.length>0);
+    tbody.closest('.table-wrap').style.display=list.length?'block':'none';
+    if(!list.length)return;
+    const statusMap={
+      pending:['待审核','gold'],
+      approved:['处理中','blue'],
+      paid:['已打款','green'],
+      rejected:['已驳回','red']
+    };
+    const typeMap={alipay:'支付宝',bank:'银行卡',wechat:'微信'};
+    tbody.innerHTML=list.map(w=>{
+      const [txt,cls]=statusMap[w.status]||[w.status,'gray'];
+      let actions='—';
+      if(w.status==='pending')actions=`<button class="row-btn danger" data-cancelwd="${w.id}">撤销</button>`;
+      return `<tr>
+        <td style="font-family:monospace;font-size:12px">${w.id}</td>
+        <td style="color:var(--gold);font-weight:700">¥${fmtMoney(w.amount)}</td>
+        <td>${typeMap[w.type]||w.type}</td>
+        <td>${w.accountName} · ${w.accountNo}</td>
+        <td><span class="tag ${cls}">${txt}</span></td>
+        <td>${fmtTime(w.createdAt)}</td>
+        <td>${actions}</td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('[data-cancelwd]').forEach(b=>b.addEventListener('click',()=>cancelWithdraw(b.dataset.cancelwd)));
+  }
+
+  $('#openWithdrawBtn').addEventListener('click',()=>{
+    const bal=calcBalance();
+    if(bal<10){showToast('可提现余额不足 10 元','err');return;}
+    $('#withdrawForm').classList.remove('hidden');
+    $('#wdAmount').value='';$('#wdName').value='';$('#wdAccount').value='';
+  });
+  $('#cancelWithdrawBtn').addEventListener('click',()=>$('#withdrawForm').classList.add('hidden'));
+
+  $('#submitWithdrawBtn').addEventListener('click',()=>{
+    const amount=parseFloat($('#wdAmount').value);
+    const name=$('#wdName').value.trim();
+    const account=$('#wdAccount').value.trim();
+    const bal=calcBalance();
+    if(isNaN(amount)||amount<10){showToast('提现金额最低 10 元','err');return;}
+    if(amount>bal){showToast('提现金额超出可提现余额','err');return;}
+    if(!name){showToast('请输入收款人姓名','err');return;}
+    if(!account){showToast('请输入收款账号','err');return;}
+    const w={
+      id:'WD'+Date.now().toString().slice(-8),
+      amount,type:$('#wdType').value,
+      accountName:name,accountNo:account,
+      status:'pending',createdAt:Date.now()
+    };
+    const list=getWithdraws();list.push(w);setWithdraws(list);
+    $('#withdrawForm').classList.add('hidden');
+    renderWithdraws();refreshStats();
+    showToast(`提现申请已提交：¥${fmtMoney(amount)}，等待审核打款`,'ok');
+  });
+
+  function cancelWithdraw(id){
+    if(!confirm('确定撤销该提现申请？'))return;
+    const list=getWithdraws().filter(w=>w.id!==id);
+    setWithdraws(list);
+    renderWithdraws();refreshStats();
+    showToast('提现申请已撤销','ok');
   }
 
   // ESC 关闭弹窗
