@@ -2072,8 +2072,10 @@
   const setGhToken=(t)=>{if(t)localStorage.setItem(ghTokenKey,t);else localStorage.removeItem(ghTokenKey)};
 
   // Termux 后端地址（填入 cloudflared 公网 URL 即启用 Termux 模式）
-  // 例如: 'https://xxx-xxx-xxx.trycloudflare.com'
-  const API_BASE = '';
+  // 方式1：直接在下面填死 URL
+  // 方式2：在浏览器控制台执行：localStorage.setItem('zx_api_base','https://xxx.trycloudflare.com')
+  //       然后刷新页面即可生效，无需改代码重新部署
+  const API_BASE = localStorage.getItem('zx_api_base') || '';
   const USE_TERMUX = !!API_BASE;
 
   // 统一 API 调用
