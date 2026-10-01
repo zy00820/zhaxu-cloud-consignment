@@ -2,7 +2,7 @@
 # ================================================
 # 栈序云寄售 - Termux 一键安装脚本（国内镜像版）
 # 在 Termux 里运行:
-#   curl -sL https://ghproxy.com/https://raw.githubusercontent.com/zy00820/zhaxu-cloud-consignment/main/backend/install.sh | bash
+#   curl -sL https://gh-proxy.com/https://raw.githubusercontent.com/zy00820/zhaxu-cloud-consignment/main/backend/install.sh | bash
 # ================================================
 
 set -e
@@ -39,7 +39,7 @@ elif [ "$ARCH" = "armv7l" ]; then
 else
   CF_FILE="cloudflared-linux-arm64"
 fi
-CF_URL="https://ghproxy.com/https://github.com/cloudflare/cloudflared/releases/latest/download/$CF_FILE"
+CF_URL="https://gh-proxy.com/https://github.com/cloudflare/cloudflared/releases/latest/download/$CF_FILE"
 
 curl -L -o ~/cloudflared "$CF_URL"
 chmod +x ~/cloudflared
@@ -51,7 +51,7 @@ echo "[4/6] 下载后端文件..."
 mkdir -p ~/zhaxu-backend
 cd ~/zhaxu-backend
 
-BASE_URL="https://ghproxy.com/https://raw.githubusercontent.com/zy00820/zhaxu-cloud-consignment/main/backend"
+BASE_URL="https://gh-proxy.com/https://raw.githubusercontent.com/zy00820/zhaxu-cloud-consignment/main/backend"
 curl -sL -o app.py "$BASE_URL/app.py"
 curl -sL -o shop-data.json "$BASE_URL/shop-data.json"
 curl -sL -o start.sh "$BASE_URL/start.sh"
