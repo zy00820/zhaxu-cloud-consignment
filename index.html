@@ -1559,10 +1559,27 @@
   });
 
   // 登录
-  document.getElementById('loginForm').addEventListener('submit',(e)=>{
+  document.getElementById('loginForm').addEventListener('submit',async (e)=>{
     e.preventDefault();
     const fd=new FormData(e.target);
     const data=Object.fromEntries(fd.entries());
+
+    // Termux 模式：调用后端登录接口
+    if(USE_TERMUX){
+      const r=await api('/api/merchant/login',{method:'POST',body:{email:data.account,password:data.password}});
+      if(r&&r.email){
+        curMerchant={shop:r.shop,email:r.email};
+        setSession(curMerchant);
+        showToast('登录成功','ok');
+        e.target.reset();
+        authMask.classList.remove('show');
+        openDashboard();
+        return;
+      }
+      showToast(r&&r.error?r.error:'登录失败，后端不可用','err');
+      return;
+    }
+
     const users=getUsers();
     const m=users.find(u=>(u.phone===data.account||u.email===data.account)&&u.password===data.password);
     if(!m){showToast('账号或密码错误','err');return;}
@@ -1789,14 +1806,29 @@
 
   // ========== 订单管理 ==========
   async function renderOrders(){
-    // 先从 GitHub 同步最新订单（跨浏览器）
+    // 先从后端/GitHub 同步最新订单（跨浏览器）
     const remote=await fetchOrders();
     if(remote.length){
       const local=getOrders();
+      // 字段映射（后端 → 前端）
+      const mapRemote=ro=>({
+        id:ro.id,
+        productId:ro.productId,
+        productName:ro.productName,
+        merchantEmail:ro.merchantEmail||curMerchant?.email,
+        buyer:ro.buyer||ro.customerName||'—',
+        buyerPhone:ro.phone||ro.buyerPhone,
+        amount:ro.amount,
+        status:ro.status==='pending'?'waiting_confirm':ro.status,
+        cardKey:ro.cardCode||ro.cardKey,
+        createdAt:ro.created||ro.createdAt,
+        updatedAt:ro.updated
+      });
       // 合并：远程优先（包含买家刚下单的新订单）
-      const merged=remote.filter(o=>o.merchantEmail===curMerchant.email).map(ro=>{
+      const merged=remote.filter(o=>(o.merchantEmail||curMerchant?.email)===curMerchant?.email||!o.merchantEmail).map(ro=>{
+        const mapped=mapRemote(ro);
         const lo=local.find(x=>x.id===ro.id);
-        return lo?Object.assign({},ro,lo):ro;
+        return lo?Object.assign({},mapped,lo):mapped;
       });
       // 加上本地独有的（如模拟订单）
       const localOnly=local.filter(o=>!remote.find(r=>r.id===o.id));
@@ -1888,6 +1920,21 @@
     if(!o){return;}
     if(o.status!=='waiting_confirm'){showToast('该订单状态不可确认','err');return;}
     if(!confirm('确认已收到买家付款？将自动发发卡密。'))return;
+
+    // Termux 模式：直接调用后端发货接口（卡密由后端分配）
+    if(USE_TERMUX){
+      const r=await api(`/api/orders/${id}/ship`,{method:'POST'});
+      if(r&&r.status==='shipped'){
+        o.status='shipped';o.cardKey=r.cardCode;o.shippedAt=Date.now();o.paidAt=Date.now();
+        setOrders(orders);
+        renderOrders();renderProducts();renderCards();refreshStats();
+        showToast(`确认收款成功，已自动发货，卡密：${r.cardCode.slice(-8)}`,'ok');
+      }else{
+        showToast(r&&r.error?r.error:'发货失败，请检查卡密库存','err');
+      }
+      return;
+    }
+
     o.paidAt=Date.now();
     const r=autoShip(o);
     setOrders(orders);
@@ -2012,19 +2059,42 @@
     showToast('提现申请已撤销','ok');
   }
 
-  // ========== 共享数据（GitHub 仓库作为后端）==========
-  // 跨浏览器同步需要商家在"店铺设置-高级"里填入 GitHub Token
-  // 无 Token 时降级为本地模式（仅同一浏览器可用）
+  // ========== 共享数据（Termux 后端 或 GitHub 仓库）==========
+  // 跨浏览器同步两种方式：
+  //   1. Termux 后端：在 API_BASE 填入 cloudflared 公网地址（推荐，更稳定）
+  //   2. GitHub 仓库：在"店铺设置-高级"里填入 GitHub Token
   const GH_CONFIG = {
     repo: 'zy00820/zhaxu-cloud-consignment',
-    token: '' // ← 商家在后台"店铺设置"里填入自己的 GitHub Token
+    token: ''
   };
   const ghTokenKey='zx_gh_token';
   const getGhToken=()=>localStorage.getItem(ghTokenKey)||GH_CONFIG.token;
   const setGhToken=(t)=>{if(t)localStorage.setItem(ghTokenKey,t);else localStorage.removeItem(ghTokenKey)};
 
-  // 公开读取 shop-data.json（所有浏览器无需 token）
+  // Termux 后端地址（填入 cloudflared 公网 URL 即启用 Termux 模式）
+  // 例如: 'https://xxx-xxx-xxx.trycloudflare.com'
+  const API_BASE = '';
+  const USE_TERMUX = !!API_BASE;
+
+  // 统一 API 调用
+  async function api(path, options = {}) {
+    if (!USE_TERMUX) return null;
+    try {
+      const res = await fetch(API_BASE + path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+      });
+      return await res.json();
+    } catch (e) { return null; }
+  }
+
+  // 读取商品/商家数据（Termux 优先，降级到 GitHub）
   async function fetchShopData(){
+    if (USE_TERMUX) {
+      const d = await api('/api/shop-data');
+      if (d) { d.cards = d.cards || []; return d; }
+    }
     try{
       const r=await fetch('shop-data.json?t='+Date.now());
       if(r.ok)return await r.json();
@@ -2032,8 +2102,12 @@
     return null;
   }
 
-  // 公开读取 orders.json（需要 token 写入）
+  // 读取订单列表（Termux 优先）
   async function fetchOrders(){
+    if (USE_TERMUX) {
+      const orders = await api('/api/orders');
+      if (orders) return orders;
+    }
     try{
       const r=await fetch('orders.json?t='+Date.now());
       if(r.ok)return await r.json();
@@ -2043,6 +2117,16 @@
 
   // 通过 GitHub API 更新仓库文件（需要 token）
   async function ghUpdateFile(path, newContent, message='update'){
+    // Termux 模式下，shop-data.json 的更新走后端接口
+    if (USE_TERMUX) {
+      if (path === 'shop-data.json' && newContent && newContent.merchants) {
+        const m = newContent.merchants[0];
+        return api('/api/merchant/update', { method:'POST', body:{
+          email: m.email, shop: m.shop, wxPaycode: m.wxPaycode, aliPaycode: m.aliPaycode, payNote: m.payNote||''
+        }});
+      }
+      return true; // Termux 模式下 orders.json 由后端处理
+    }
     const token=getGhToken();
     if(!token){console.warn('[GH] no token, skip write');return null;}
     try{
@@ -2078,13 +2162,30 @@
     }catch(e){console.error('[GH] update err',e);return null;}
   }
 
-  // 同步订单到 GitHub（追加新订单）
+  // 同步订单到后端（追加新订单）
   async function ghSyncOrders(allOrders){
+    if (USE_TERMUX) {
+      // Termux 模式：直接创建最新的订单
+      const last = allOrders[allOrders.length - 1];
+      if (last) {
+        const r = await api('/api/orders', { method:'POST', body:{
+          productId: last.productId, customerName: last.customerName,
+          phone: last.phone, email: last.email||'', payMethod: last.payMethod
+        }});
+        return r && r.id;
+      }
+      return true;
+    }
     return ghUpdateFile('orders.json', allOrders, 'sync orders');
   }
 
-  // 卡密发放：从 shop-data.json 取卡并标记已售
+  // 卡密发放（Termux 走后端发货接口，GitHub 走本地取卡）
   async function ghShipCard(productId, orderId){
+    if (USE_TERMUX) {
+      const r = await api(`/api/orders/${orderId}/ship`, { method:'POST' });
+      if (r && r.cardCode) return { code: r.cardCode, status: 'sold' };
+      return null;
+    }
     const sd=await fetchShopData();
     if(!sd)return null;
     const idx=sd.cards.findIndex(c=>c.productId===productId&&c.status==='available');
@@ -2100,23 +2201,6 @@
   const BUYER_ORDERS_KEY='zx_buyer_orders';
   const catIcon={'软件激活码':'🔑','游戏礼品卡':'🎮','会员兑换码':'🎬','API与云服务':'☁️','网课激活码':'📚','电商购物卡':'🛍️','其他':'🎁'};
 
-  // 后端 API 地址（部署后端后填入，例如 https://your-app.onrender.com）
-  // 留空则使用前端本地模拟支付
-  const API_BASE = '';
-
-  // 调用后端 API
-  async function api(path, options = {}) {
-    try {
-      const res = await fetch(API_BASE + path, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
-        body: options.body ? JSON.stringify(options.body) : undefined,
-      });
-      return await res.json();
-    } catch (e) {
-      return null; // 后端不可用
-    }
-  }
 
   // 打开买家商城
   const marketMask=$('#marketMask');
@@ -2231,7 +2315,18 @@
     }
 
     // 创建订单（待买家点"我已支付"确认后进入商家后台）
-    const orderId='ZX'+Date.now().toString().slice(-8);
+    let orderId='ZX'+Date.now().toString().slice(-8);
+
+    // Termux 模式：直接在后端创建订单
+    if(USE_TERMUX){
+      const r=await api('/api/orders',{method:'POST',body:{
+        productId:gid, customerName:nick, phone:phone, email:'', payMethod:'wechat'
+      }});
+      if(r&&r.id){
+        orderId=r.id; // 用后端返回的订单 ID
+      }
+    }
+
     const merchOrders=store.get(ordKey(memail));
     merchOrders.push({
       id:orderId,productId:gid,productName:p.name,
@@ -2294,14 +2389,21 @@
     const phone=prompt('请输入下单时的手机号，查询您的订单：');
     if(!phone)return;
     let list=[];
-    if(API_BASE){
-      const r=await api('/api/buyer/orders/'+phone);
-      if(r&&r.ok)list=r.orders;
+    if(USE_TERMUX){
+      // Termux 后端：按手机号查订单
+      const r=await api('/api/orders/phone/'+encodeURIComponent(phone));
+      if(Array.isArray(r)){
+        list=r.map(o=>({
+          id:o.id, productName:o.productName, amount:o.amount,
+          payMethod:o.payMethod, status:o.status, cardKey:o.cardCode,
+          createdAt:o.created, buyerPhone:o.phone
+        }));
+      }
     }
     // 从 GitHub 共享文件读取（跨浏览器）
     if(!list.length){
       const remote=await fetchOrders();
-      list=remote.filter(o=>o.buyerPhone===phone);
+      list=remote.filter(o=>(o.phone||o.buyerPhone)===phone);
     }
     // 本地兜底
     if(!list.length){
