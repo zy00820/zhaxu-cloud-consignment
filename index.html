@@ -2223,7 +2223,8 @@
     if(sd&&sd.products&&sd.products.length){
       sd.products.forEach(p=>{
         if(p.status!=='active')return;
-        const avail=sd.cards.filter(c=>c.productId===p.id&&c.status==='available').length;
+        // Termux 后端直接返回 availableCount，GitHub 模式从 cards 计算
+        const avail=p.availableCount!==undefined?p.availableCount:(sd.cards.filter(c=>c.productId===p.id&&c.status==='available').length);
         if(avail>0){
           const m=sd.merchants.find(x=>x.email===p.merchantEmail);
           goods.push({id:p.id,name:p.name,category:p.category,price:p.price,stock:avail,merchantEmail:p.merchantEmail,shop:m?m.shop:'未知店铺'});
