@@ -1190,7 +1190,6 @@
               <option value="shipped">已发货</option>
               <option value="refunded">已退款</option>
             </select>
-            <button class="btn btn-primary sm" id="simOrderBtn">🎮 模拟买家下单</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -1201,7 +1200,7 @@
         </div>
         <div id="orderEmpty" class="empty-hint small hidden">
           <div class="empty-ic">🧾</div>
-          <p>暂无订单，点击「模拟买家下单」测试自动发货流程</p>
+          <p>暂无订单</p>
         </div>
       </div>
 
@@ -1893,26 +1892,6 @@
     }));
   }
   $('#orderFilter').addEventListener('change',renderOrders);
-
-  // 模拟买家下单（直接创建待确认收款订单，模拟买家扫码付款后商家看到的状态）
-  $('#simOrderBtn').addEventListener('click',()=>{
-    const products=getProducts();
-    if(!products.length){showToast('请先添加商品','err');switchDashTab('cards');return;}
-    const cards=getCards();
-    const withStock=products.filter(p=>cards.some(c=>c.productId===p.id&&c.status==='available'));
-    if(!withStock.length){showToast('所有商品库存不足，请先上传卡密','err');switchDashTab('cards');return;}
-    const p=withStock[Math.floor(Math.random()*withStock.length)];
-    const order={
-      id:'ZX'+Date.now().toString().slice(-8),
-      productId:p.id,productName:p.name,
-      buyer:'buyer_'+Math.random().toString(36).slice(2,8),
-      amount:p.price,status:'waiting_confirm',cardKey:null,
-      createdAt:Date.now(),buyerPaidAt:Date.now()
-    };
-    const list=getOrders();list.push(order);setOrders(list);
-    renderOrders();refreshStats();
-    showToast(`模拟买家已下单：${p.name}，请点「确认收款」自动发货`,'ok');
-  });
 
   // 自动发货核心：从卡密池取可用卡密 → 标记已售 → 订单置已发货
   // 幂等：同一订单只发一次，已发货订单直接返回
