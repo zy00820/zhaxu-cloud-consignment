@@ -1093,6 +1093,7 @@
       <div class="ds"><div class="ds-v" id="stOrders">0</div><div class="ds-k">总订单</div></div>
       <div class="ds"><div class="ds-v" id="stStock">0</div><div class="ds-k">库存卡密</div></div>
       <div class="ds"><div class="ds-v" id="stSold">0</div><div class="ds-k">累计发码</div></div>
+      <div class="ds"><div class="ds-v" id="stFee">¥0.00</div><div class="ds-k">手续费收入</div></div>
     </div>
 
     <!-- 标签页 -->
@@ -1333,6 +1334,10 @@
             <label class="field"><span>联系人</span><input type="text" id="shopContact" placeholder="如：张三"></label>
           </div>
           <label class="field"><span>联系邮箱（买家下单后通知你）</span><input type="email" id="shopEmail" placeholder="如：you@qq.com"></label>
+          <div class="field-row">
+            <label class="field"><span>手续费费率（%）</span><input type="number" id="shopFeeRate" placeholder="2" step="0.1" min="0" max="100"></label>
+            <label class="field"><span>说明</span><input type="text" value="买家实付 = 商品价 + 手续费" readonly style="background:#f5f5f5;color:#999"></label>
+          </div>
         </div>
 
         <div class="sub-form" style="margin-top:20px">
@@ -1651,10 +1656,12 @@
     const stock=cards.filter(c=>c.status==='available').length;
     const sold=cards.filter(c=>c.status==='sold').length;
     const balance=calcBalance();
+    const totalFee=orders.reduce((s,o)=>s+(o.fee||0),0);
     $('#stBalance').textContent='¥'+fmtMoney(balance);
     $('#stOrders').textContent=orders.length;
     $('#stStock').textContent=stock;
     $('#stSold').textContent=sold;
+    $('#stFee').textContent='¥'+fmtMoney(totalFee);
     const wb=$('#walletBalance');
     if(wb)wb.textContent='¥'+fmtMoney(balance);
   }
@@ -1842,6 +1849,7 @@
         buyer:ro.buyer||ro.customerName||'—',
         buyerPhone:ro.phone||ro.buyerPhone,
         amount:ro.amount,
+        fee:ro.fee||0,
         status:ro.status==='pending'?'waiting_confirm':ro.status,
         cardKey:ro.cardCode||ro.cardKey,
         createdAt:ro.created||ro.createdAt,
@@ -1874,6 +1882,8 @@
     };
     tbody.innerHTML=orders.map(o=>{
       const [txt,cls]=statusMap[o.status]||[o.status,'gray'];
+      const fee=o.fee||0;
+      const realAmt=Math.round((o.amount-fee)*100)/100;
       const cardCell=(o.status==='shipped')
         ?`<span class="key-cell" title="${o.cardKey||''}">${o.cardKey?'****-****-****-'+o.cardKey.slice(-4):'—'}</span>`
         :'—';
@@ -1885,7 +1895,10 @@
         <td style="font-family:monospace;font-size:12px">${o.id}</td>
         <td>${o.productName}</td>
         <td>${o.buyer}</td>
-        <td style="color:var(--gold);font-weight:700">¥${fmtMoney(o.amount)}</td>
+        <td>
+          <div style="color:var(--gold);font-weight:700">¥${fmtMoney(o.amount)}</div>
+          ${fee>0?`<div style="font-size:11px;color:#999">含手续费 ¥${fmtMoney(fee)} · 实收 ¥${fmtMoney(realAmt)}</div>`:''}
+        </td>
         <td><span class="tag ${cls}">${txt}</span></td>
         <td>${cardCell}</td>
         <td>${fmtTime(o.createdAt)}</td>
@@ -2128,7 +2141,7 @@
       if (path === 'shop-data.json' && newContent && newContent.merchants) {
         const m = newContent.merchants[0];
         return api('/api/merchant/update', { method:'POST', body:{
-          email: m.email, shop: m.shop, wxPaycode: m.wxPaycode, aliPaycode: m.aliPaycode, payNote: m.payNote||''
+          email: m.email, shop: m.shop, wxPaycode: m.wxPaycode, aliPaycode: m.aliPaycode, payNote: m.payNote||'', feeRate: m.feeRate||2.0
         }});
       }
       return true; // Termux 模式下 orders.json 由后端处理
@@ -2306,12 +2319,16 @@
     const {gid,memail,p,shop,stock}=curBuyGoods;
     if(stock<=0){showToast('手慢了，商品已售罄','err');buyMask.classList.remove('show');renderMarket();return;}
 
-    // 读取商家收款码：优先从 GitHub 共享文件
+    // 读取商家收款码 + 手续费费率
     let paycode={wx:'',ali:'',note:''};
+    let feeRate=2.0;
     const sd=await fetchShopData();
     if(sd){
       let m=sd.merchants.find(x=>x.email===memail)||sd.merchants[0];
-      if(m){paycode={wx:m.wxPaycode||'',ali:m.aliPaycode||'',note:m.payNote||''};}
+      if(m){
+        paycode={wx:m.wxPaycode||'',ali:m.aliPaycode||'',note:m.payNote||''};
+        feeRate=m.feeRate!=null?m.feeRate:2.0;
+      }
     }
     // 本地兜底
     if(!paycode.wx&&!paycode.ali){
@@ -2320,6 +2337,10 @@
     if(!paycode.wx&&!paycode.ali){
       showToast('商家暂未配置收款方式，请稍后再试','err');return;
     }
+
+    // 计算手续费
+    const fee=Math.round(p.price*feeRate*100)/100;
+    const totalAmount=Math.round((p.price+fee)*100)/100;
 
     // 创建订单（待买家点"我已支付"确认后进入商家后台）
     let orderId='ZX'+Date.now().toString().slice(-8);
@@ -2337,21 +2358,21 @@
     const merchOrders=store.get(ordKey(memail));
     merchOrders.push({
       id:orderId,productId:gid,productName:p.name,
-      buyer:nick,buyerPhone:phone,amount:p.price,status:'pending_pay',
+      buyer:nick,buyerPhone:phone,amount:p.price,fee,status:'pending_pay',
       cardKey:null,createdAt:Date.now()
     });
     store.set(ordKey(memail),merchOrders);
     const buyerOrders=store.get(BUYER_ORDERS_KEY);
     buyerOrders.push({
       id:orderId,merchantEmail:memail,productId:gid,productName:p.name,shop,
-      amount:p.price,buyerNick:nick,buyerPhone:phone,cardKey:null,
+      amount:p.price,fee,buyerNick:nick,buyerPhone:phone,cardKey:null,
       status:'pending_pay',createdAt:Date.now()
     });
     store.set(BUYER_ORDERS_KEY,buyerOrders);
 
     buyMask.classList.remove('show');
     // 打开收款码弹窗（展示后买家扫码付款即可，订单已在商家后台）
-    openPayConfirm(orderId,p.name,shop,p.price,paycode);
+    openPayConfirm(orderId,p.name,shop,p.price,fee,totalAmount,paycode);
   });
 
   function showResult(productName,shop,cardKey){
@@ -2401,7 +2422,7 @@
       const r=await api('/api/orders/phone/'+encodeURIComponent(phone));
       if(Array.isArray(r)){
         list=r.map(o=>({
-          id:o.id, productName:o.productName, amount:o.amount,
+          id:o.id, productName:o.productName, amount:o.amount, fee:o.fee||0,
           payMethod:o.payMethod, status:o.status, cardKey:o.cardCode,
           createdAt:o.created, buyerPhone:o.phone
         }));
@@ -2454,7 +2475,7 @@
         ${keyBox}
         <div class="bo-meta">
           <span>${fmtTime(o.createdAt)}</span>
-          <span class="bo-amount">¥${fmtMoney(o.amount)}</span>
+          <span class="bo-amount">¥${fmtMoney(o.amount)}${o.fee?`<span style="font-size:11px;color:#999;font-weight:400"> (含手续费 ¥${fmtMoney(o.fee)})</span>`:''}</span>
         </div>
       </div>
       `;
@@ -2550,6 +2571,7 @@
     $('#jsTemplate').value=s.jsTemplate||'';
     $('#jsPublicKey').value=s.jsPublicKey||'';
     $('#ghToken').value=getGhToken()||'';
+    $('#shopFeeRate').value=s.feeRate!=null?s.feeRate:(m?.feeRate||2.0);
   }
   $('#saveSettingsBtn').addEventListener('click',async ()=>{
     const s={
@@ -2558,7 +2580,8 @@
       shopEmail:$('#shopEmail').value.trim(),
       jsService:$('#jsService').value.trim(),
       jsTemplate:$('#jsTemplate').value.trim(),
-      jsPublicKey:$('#jsPublicKey').value.trim()
+      jsPublicKey:$('#jsPublicKey').value.trim(),
+      feeRate:parseFloat($('#shopFeeRate').value)||2.0
     };
     store.set(settingsKey(curMerchant.email),s);
     // 保存 GitHub Token（跨浏览器同步）
@@ -2571,15 +2594,24 @@
       if(m){
         if(s.shopName)m.shop=s.shopName;
         if(s.shopContact)m.contact=s.shopContact;
+        m.feeRate=s.feeRate;
         store.set(USERS_KEY,merchants);
         curMerchant=m;
       }
     }
-    // 同步店铺信息到 shop-data.json
-    const sd=await fetchShopData();
-    if(sd){
-      const m=sd.merchants.find(x=>x.email===curMerchant.email);
-      if(m){m.shop=s.shopName||curMerchant.shop;if(s.shopEmail)m.payNote=s.payNote||'';ghUpdateFile('shop-data.json',sd,'update shop info');}
+    // 同步店铺信息到后端
+    if(USE_TERMUX){
+      await api('/api/merchant/update',{method:'POST',body:{
+        email:curMerchant.email,shop:s.shopName||curMerchant.shop,
+        wxPaycode:curMerchant.wxPaycode||'',aliPaycode:curMerchant.aliPaycode||'',
+        payNote:s.payNote||'',feeRate:s.feeRate
+      }});
+    }else{
+      const sd=await fetchShopData();
+      if(sd){
+        const m=sd.merchants.find(x=>x.email===curMerchant.email);
+        if(m){m.shop=s.shopName||curMerchant.shop;m.feeRate=s.feeRate;if(s.shopEmail)m.payNote=s.payNote||'';ghUpdateFile('shop-data.json',sd,'update shop info');}
+      }
     }
     showToast(token?'店铺设置已保存，跨浏览器同步已启用':'店铺设置已保存','ok');
   });
@@ -2618,7 +2650,7 @@
     }catch(e){console.warn('邮件发送异常:',e.message);return false;}
   }
 
-  function openPayConfirm(orderId,goods,shop,amount,paycode){
+  function openPayConfirm(orderId,goods,shop,amount,fee,totalAmount,paycode){
     const hasWx=!!paycode.wx,hasAli=!!paycode.ali;
     if(!hasWx&&!hasAli){
       showToast('商家未上传收款码，请联系商家','err');return;
@@ -2632,9 +2664,11 @@
       <img src="${paycode.ali}" style="max-width:150px;border-radius:8px;border:1px solid var(--line);background:#fff">
       <div style="font-size:12px;color:#1677ff;margin-top:6px">支付宝扫码</div>
     </div>`:'';
+    const feeHtml=fee>0?`<div style="font-size:13px;color:#999;margin-top:8px">商品 ¥${fmtMoney(amount)} + 手续费 ¥${fmtMoney(fee)}</div>`:'';
     const body=payConfirmMask.querySelector('.pay-confirm-box');
     body.innerHTML=`
-      <div class="pay-amount">¥${fmtMoney(amount)}</div>
+      <div class="pay-amount">¥${fmtMoney(totalAmount)}</div>
+      ${feeHtml}
       <div style="font-size:14px;color:#555;margin-top:6px">${goods} · ${shop}</div>
       <div class="pay-order-id">订单号：${orderId}</div>
       <div style="margin-top:14px">${wxBox}${aliBox}</div>

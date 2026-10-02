@@ -33,6 +33,7 @@ def init_db():
         wxPaycode TEXT DEFAULT '',
         aliPaycode TEXT DEFAULT '',
         payNote TEXT DEFAULT '',
+        feeRate REAL DEFAULT 2.0,
         password TEXT DEFAULT 'xdf195458'
     )""")
 
@@ -65,12 +66,23 @@ def init_db():
         phone TEXT,
         email TEXT DEFAULT '',
         amount REAL,
+        fee REAL DEFAULT 0,
         payMethod TEXT,
         status TEXT DEFAULT 'pending',
         cardCode TEXT DEFAULT '',
         created INTEGER,
         updated INTEGER
     )""")
+
+    # 兼容旧库：补字段
+    try:
+        c.execute("ALTER TABLE merchants ADD COLUMN feeRate REAL DEFAULT 2.0")
+    except Exception:
+        pass
+    try:
+        c.execute("ALTER TABLE orders ADD COLUMN fee REAL DEFAULT 0")
+    except Exception:
+        pass
 
     # 导入初始数据（如果表是空的）
     c.execute("SELECT COUNT(*) FROM merchants")
@@ -161,17 +173,24 @@ def create_order():
         conn.close()
         return jsonify({"error": "商品不存在"}), 404
 
+    # 获取商家手续费费率（默认2%）
+    feeRate = 2.0
+    m = conn.execute("SELECT feeRate FROM merchants WHERE email=?", (product["merchantEmail"],)).fetchone()
+    if m and m["feeRate"] is not None:
+        feeRate = m["feeRate"]
+    fee = round(product["price"] * feeRate / 100, 2)
+
     conn.execute(
-        """INSERT INTO orders (id, productId, productName, merchantEmail, customerName, phone, email, amount, payMethod, status, created, updated)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        """INSERT INTO orders (id, productId, productName, merchantEmail, customerName, phone, email, amount, fee, payMethod, status, created, updated)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (order_id, product["id"], product["name"], product["merchantEmail"],
          body["customerName"], body["phone"], body.get("email", ""),
-         product["price"], body["payMethod"], "pending", now, now)
+         product["price"], fee, body["payMethod"], "pending", now, now)
     )
     conn.commit()
     conn.close()
 
-    return jsonify({"id": order_id, "status": "pending"}), 201
+    return jsonify({"id": order_id, "status": "pending", "fee": fee, "feeRate": feeRate}), 201
 
 
 @app.route("/api/orders/<order_id>/ship", methods=["POST"])
@@ -246,9 +265,9 @@ def merchant_update():
     body = request.json
     conn = get_db()
     conn.execute(
-        "UPDATE merchants SET shop=?, wxPaycode=?, aliPaycode=?, payNote=? WHERE email=?",
+        "UPDATE merchants SET shop=?, wxPaycode=?, aliPaycode=?, payNote=?, feeRate=? WHERE email=?",
         (body["shop"], body.get("wxPaycode", ""), body.get("aliPaycode", ""),
-         body.get("payNote", ""), body["email"])
+         body.get("payNote", ""), body.get("feeRate", 2.0), body["email"])
     )
     conn.commit()
     conn.close()
