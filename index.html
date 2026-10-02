@@ -2683,27 +2683,9 @@
     $('#payConfirmCancel').addEventListener('click',()=>payConfirmMask.classList.remove('show'));
   }
 
-  // ========== 启动引导：自动创建商家账号 + 预配置 ==========
+  // ========== 启动引导：不再预配置默认商家账号 ==========
   (function bootstrap(){
-    const DEMO_MERCHANTS=[
-      {shop:'栈序云寄售旗舰店',contact:'店主',email:'zy00820',phone:'13800000000',password:'xdf195458'},
-      {shop:'栈序云寄售旗舰店',contact:'店主',email:'zy291817@outlook.com',phone:'13900000000',password:'123456'}
-    ];
     const users=getUsers();
-    DEMO_MERCHANTS.forEach(d=>{
-      if(!users.find(u=>u.email===d.email||u.phone===d.phone)){
-        users.push({...d,createdAt:Date.now()});
-      }
-      // 预配置店铺设置
-      const settings=store.get(settingsKey(d.email))||{};
-      if(!settings.shopEmail)settings.shopEmail=d.email;
-      settings.shopName=settings.shopName||d.shop;
-      store.set(settingsKey(d.email),settings);
-      // 预配置收款说明
-      const pc=store.get(paycodeKey(d.email))||{};
-      if(!pc.note)pc.note='扫码付款后，请点「✅ 我已支付，通知商家」，我会收到提醒后立即确认并发货。';
-      store.set(paycodeKey(d.email),pc);
-    });
     saveUsers(users);
   })();
 
