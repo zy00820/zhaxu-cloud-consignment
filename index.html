@@ -1825,7 +1825,8 @@
         updatedAt:ro.updated
       });
       // 合并：远程优先（包含买家刚下单的新订单）
-      const merged=remote.filter(o=>(o.merchantEmail||curMerchant?.email)===curMerchant?.email||!o.merchantEmail).map(ro=>{
+      // 单个商家模式：显示所有订单
+      const merged=remote.map(ro=>{
         const mapped=mapRemote(ro);
         const lo=local.find(x=>x.id===ro.id);
         return lo?Object.assign({},mapped,lo):mapped;
