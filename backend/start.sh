@@ -30,14 +30,18 @@ echo ""
 echo "[2/2] 启动 cloudflared 内网穿透..."
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 
+# 修复 DNS：Termux 默认 DNS 可能指向 [::1] 导致解析失败
+echo "nameserver 8.8.8.8" > $PREFIX/etc/resolv.conf
+echo "nameserver 1.1.1.1" >> $PREFIX/etc/resolv.conf
+
 # 清理旧日志
 rm -f cloudflared.log
 
-# 启动 cloudflared（快速隧道，无需注册）
-nohup ~/cloudflared tunnel --url http://127.0.0.1:5000 > cloudflared.log 2>&1 &
+# 启动 cloudflared（快速隧道，无需注册），强制 IPv4
+nohup ~/cloudflared tunnel --url http://127.0.0.1:5000 --edge-ip-version 4 > cloudflared.log 2>&1 &
 
-echo "  等待隧道建立（约 10 秒）..."
-sleep 10
+echo "  等待隧道建立（约 15 秒）..."
+sleep 15
 
 # 提取公网 URL
 CF_URL=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' cloudflared.log | head -1)
