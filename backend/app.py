@@ -260,6 +260,70 @@ def merchant_register():
     return jsonify({"email": body["email"], "shop": body["shop"]}), 201
 
 
+# ========== 超级管理员 ==========
+ADMIN_USER = "zy00820"
+ADMIN_PASS = "xdf195458"
+
+
+@app.route("/api/admin/login", methods=["POST"])
+def admin_login():
+    body = request.json
+    if body.get("email") != ADMIN_USER or body.get("password") != ADMIN_PASS:
+        return jsonify({"error": "管理员账号或密码错误"}), 401
+    return jsonify({"ok": True, "user": ADMIN_USER})
+
+
+@app.route("/api/admin/merchants", methods=["GET"])
+def admin_merchants():
+    conn = get_db()
+    merchants = [dict(r) for r in conn.execute(
+        "SELECT email, shop, feeRate, password FROM merchants ORDER BY rowid DESC"
+    ).fetchall()]
+    # 统计每个商家的订单数和收入
+    for m in merchants:
+        stats = conn.execute(
+            "SELECT COUNT(*) as cnt, COALESCE(SUM(amount),0) as total, COALESCE(SUM(fee),0) as fees FROM orders WHERE merchantEmail=?",
+            (m["email"],)
+        ).fetchone()
+        m["orderCount"] = stats["cnt"]
+        m["totalAmount"] = stats["total"]
+        m["totalFee"] = stats["fees"]
+    conn.close()
+    return jsonify(merchants)
+
+
+@app.route("/api/admin/merchants/<email>", methods=["DELETE"])
+def admin_delete_merchant(email):
+    conn = get_db()
+    conn.execute("DELETE FROM merchants WHERE email=?", (email,))
+    conn.execute("DELETE FROM products WHERE merchantEmail=?", (email,))
+    conn.execute("DELETE FROM cards WHERE productId IN (SELECT id FROM products WHERE merchantEmail=?)", (email,))
+    conn.execute("DELETE FROM orders WHERE merchantEmail=?", (email,))
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/stats", methods=["GET"])
+def admin_stats():
+    conn = get_db()
+    merchant_count = conn.execute("SELECT COUNT(*) FROM merchants").fetchone()[0]
+    order_count = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    total_amount = conn.execute("SELECT COALESCE(SUM(amount),0) FROM orders").fetchone()[0]
+    total_fee = conn.execute("SELECT COALESCE(SUM(fee),0) FROM orders").fetchone()[0]
+    card_count = conn.execute("SELECT COUNT(*) FROM cards").fetchone()[0]
+    sold_count = conn.execute("SELECT COUNT(*) FROM cards WHERE status='sold'").fetchone()[0]
+    conn.close()
+    return jsonify({
+        "merchantCount": merchant_count,
+        "orderCount": order_count,
+        "totalAmount": total_amount,
+        "totalFee": total_fee,
+        "cardCount": card_count,
+        "soldCount": sold_count
+    })
+
+
 @app.route("/api/merchant/update", methods=["POST"])
 def merchant_update():
     body = request.json
