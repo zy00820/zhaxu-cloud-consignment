@@ -1535,18 +1535,27 @@
   $$('[data-open-merchant]').forEach(b=>b.addEventListener('click',(e)=>{e.preventDefault();openMerchant()}));
 
   // 注册
-  document.getElementById('registerForm').addEventListener('submit',(e)=>{
+  document.getElementById('registerForm').addEventListener('submit',async (e)=>{
     e.preventDefault();
     const fd=new FormData(e.target);
     const data=Object.fromEntries(fd.entries());
     if(data.password!==data.password2){showToast('两次密码输入不一致','err');return;}
     if(!/^1\d{10}$/.test(data.phone)){showToast('请输入正确的手机号','err');return;}
-    const users=getUsers();
-    if(users.find(u=>u.phone===data.phone||u.email===data.email)){
-      showToast('该手机号或邮箱已注册','err');return;
-    }
     const merchant={shop:data.shop.trim(),contact:data.contact.trim(),phone:data.phone,email:data.email,password:data.password,createdAt:Date.now()};
-    users.push(merchant);saveUsers(users);
+    // Termux 模式：注册到后端（跨浏览器同步）
+    if(USE_TERMUX){
+      const r=await api('/api/merchant/register',{method:'POST',body:{
+        email:merchant.email,shop:merchant.shop,password:merchant.password
+      }});
+      if(r&&r.error){showToast(r.error,'err');return;}
+      if(!r||!r.email){showToast('注册失败，请重试','err');return;}
+    }else{
+      const users=getUsers();
+      if(users.find(u=>u.phone===data.phone||u.email===data.email)){
+        showToast('该手机号或邮箱已注册','err');return;
+      }
+      users.push(merchant);saveUsers(users);
+    }
     showToast('注册成功，自动登录中…','ok');
     setTimeout(()=>{
       curMerchant={shop:merchant.shop,email:merchant.email};
@@ -1700,10 +1709,11 @@
     setProducts(list);
     // Termux 模式：同步商品到后端
     if(USE_TERMUX){
-      await api('/api/products',{method:'POST',body:{
+      const r=await api('/api/products',{method:'POST',body:{
         id:pid,merchantEmail:curMerchant.email,name,category:$('#pfCat').value,
         price,desc:'',stockWarn:warn,status:'active'
       }});
+      if(!r||!r.id){showToast('商品已保存，但同步到云端失败，买家可能暂时看不到','warn');}
     }
     $('#productForm').classList.add('hidden');
     renderProducts();

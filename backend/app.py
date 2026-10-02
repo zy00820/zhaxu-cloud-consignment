@@ -224,6 +224,23 @@ def merchant_login():
     return jsonify({"email": m["email"], "shop": m["shop"]})
 
 
+@app.route("/api/merchant/register", methods=["POST"])
+def merchant_register():
+    body = request.json
+    conn = get_db()
+    exist = conn.execute("SELECT email FROM merchants WHERE email=?", (body["email"],)).fetchone()
+    if exist:
+        conn.close()
+        return jsonify({"error": "该邮箱已注册"}), 400
+    conn.execute(
+        "INSERT INTO merchants (email, shop, password) VALUES (?,?,?)",
+        (body["email"], body["shop"], body["password"])
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"email": body["email"], "shop": body["shop"]}), 201
+
+
 @app.route("/api/merchant/update", methods=["POST"])
 def merchant_update():
     body = request.json
