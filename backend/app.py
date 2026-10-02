@@ -238,6 +238,22 @@ def merchant_update():
     return jsonify({"ok": True})
 
 
+@app.route("/api/products", methods=["POST"])
+def add_product():
+    body = request.json
+    conn = get_db()
+    product_id = body.get("id") or ("prod_" + str(int(time.time() * 1000))[-8:])
+    conn.execute(
+        "INSERT OR REPLACE INTO products (id, merchantEmail, name, category, price, desc, stockWarn, status) VALUES (?,?,?,?,?,?,?,?)",
+        (product_id, body.get("merchantEmail", "zy00820"), body["name"],
+         body.get("category", "其他"), body["price"], body.get("desc", ""),
+         body.get("stockWarn", 5), body.get("status", "active"))
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"id": product_id}), 201
+
+
 @app.route("/api/cards", methods=["GET"])
 def get_cards():
     conn = get_db()

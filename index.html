@@ -1689,15 +1689,23 @@
     $('#pfName').value='';$('#pfPrice').value='';$('#pfWarn').value='10';
   });
   $('#cancelProductBtn').addEventListener('click',()=>$('#productForm').classList.add('hidden'));
-  $('#saveProductBtn').addEventListener('click',()=>{
+  $('#saveProductBtn').addEventListener('click',async ()=>{
     const name=$('#pfName').value.trim();
     const price=parseFloat($('#pfPrice').value);
     const warn=parseInt($('#pfWarn').value)||10;
     if(!name){showToast('请输入商品名称','err');return;}
     if(isNaN(price)||price<0){showToast('请输入有效的售价','err');return;}
+    const pid=uid();
     const list=getProducts();
-    list.push({id:uid(),name,category:$('#pfCat').value,price,warn,createdAt:Date.now()});
+    list.push({id:pid,name,category:$('#pfCat').value,price,warn,createdAt:Date.now(),status:'active'});
     setProducts(list);
+    // Termux 模式：同步商品到后端
+    if(USE_TERMUX){
+      await api('/api/products',{method:'POST',body:{
+        id:pid,merchantEmail:curMerchant.email,name,category:$('#pfCat').value,
+        price,desc:'',stockWarn:warn,status:'active'
+      }});
+    }
     $('#productForm').classList.add('hidden');
     renderProducts();
     showToast('商品已创建，请上传卡密','ok');
@@ -1786,7 +1794,7 @@
     $('#cardKeysInput').value='';
   });
   $('#cancelCardBtn').addEventListener('click',()=>$('#cardUploadForm').classList.add('hidden'));
-  $('#saveCardBtn').addEventListener('click',()=>{
+  $('#saveCardBtn').addEventListener('click',async ()=>{
     const raw=$('#cardKeysInput').value.trim();
     if(!raw){showToast('请输入卡密','err');return;}
     const lines=raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -1799,6 +1807,12 @@
       exist.add(k);
     });
     const list=getCards();list.push(...toAdd);setCards(list);
+    // Termux 模式：同步卡密到后端
+    if(USE_TERMUX){
+      for(const c of toAdd){
+        await api('/api/cards',{method:'POST',body:{productId:c.productId,code:c.key}});
+      }
+    }
     $('#cardUploadForm').classList.add('hidden');$('#cardKeysInput').value='';
     renderCards();renderProducts();refreshStats();
     showToast(`成功上传 ${toAdd.length} 条卡密${dup?`，跳过 ${dup} 条重复`:''}`,'ok');
@@ -2497,7 +2511,7 @@
         // 同步到 GitHub shop-data.json（买家才能看到收款码）
         const sd=await fetchShopData();
         if(sd){
-          const m=sd.merchants.find(x=>x.email===curMerchant.email);
+          const m=sd.merchants.find(x=>x.email===curMerchant.email)||sd.merchants[0];
           if(m){m.wxPaycode=p.wx;m.aliPaycode=p.ali;m.payNote=p.note||'';await ghUpdateFile('shop-data.json',sd,'update paycode');}
         }
         renderPaycode();
